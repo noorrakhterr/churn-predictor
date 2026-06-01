@@ -1,0 +1,4 @@
+# Ignore everything in this directory except this file.
+# Raw data is excluded from version control — see README for sourcing instructions.
+*
+!.gitignore
