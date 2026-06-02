@@ -6,10 +6,11 @@ Product context: a risk score without an explanation is useless for a CSM.
 sponsor change, and rising critical tickets" is an actionable talking point.
 This module is the bridge between ML output and CSM action.
 
-Note: the model is now a Pipeline(ColumnTransformer → CalibratedClassifierCV).
-Scoring (`score_accounts`) runs straight through the pipeline on raw columns.
-SHAP attribution (`explain_account`) transforms the row through the fitted
-preprocessor and explains the underlying tree model.
+Note: the estimator (models/churn_model.pkl) is a CalibratedClassifierCV that
+consumes already-encoded arrays, and the fitted encoder is loaded separately
+from models/preprocessor.pkl. Scoring (`score_accounts`) transforms raw columns
+through that preprocessor before predicting; SHAP attribution (`explain_account`)
+does the same and explains the underlying tree model.
 """
 
 from __future__ import annotations
@@ -25,9 +26,10 @@ import shap
 # `python -m src.explain` (mirrors the bootstrap in app/app.py).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from preprocess import CATEGORICAL_COLS
+from preprocess import CATEGORICAL_COLS, RAW_DATA_PATH
 
 MODEL_PATH = Path("models/churn_model.pkl")
+PREPROCESSOR_PATH = Path("models/preprocessor.pkl")
 
 # Human-readable labels for the dashboard, keyed by raw column name.
 FEATURE_LABELS: dict[str, str] = {
@@ -57,7 +59,11 @@ FEATURE_LABELS: dict[str, str] = {
 
 
 def load_artifact(model_path: Path = MODEL_PATH) -> dict:
-    return joblib.load(model_path)
+    # Load the trained estimator bundle and attach the separately-saved fitted
+    # preprocessor (encoding is owned by preprocess.py, never rebuilt here).
+    artifact = joblib.load(model_path)
+    artifact["preprocessor"] = joblib.load(PREPROCESSOR_PATH)
+    return artifact
 
 
 def _pretty_name(transformed_name: str) -> str:
@@ -84,8 +90,9 @@ def score_accounts(df: pd.DataFrame, artifact: dict) -> pd.DataFrame:
     """Returns df with a churn_probability and churn_flag column appended."""
     model = artifact["model"]
     threshold = artifact["threshold"]
-    features = artifact["feature_cols"]
-    X = df[features]
+    preprocessor = artifact["preprocessor"]
+    # Select the raw input columns the preprocessor was fit on, then encode.
+    X = preprocessor.transform(df[list(preprocessor.feature_names_in_)])
     probs = model.predict_proba(X)[:, 1]
     result = df.copy()
     result["churn_probability"] = probs
@@ -103,13 +110,13 @@ def explain_account(
     Each item: {"feature": human label, "direction": "increases"/"decreases", "shap_value": float}
     """
     model = artifact["model"]
-    features = artifact["feature_cols"]
+    preprocessor = artifact["preprocessor"]
+    features = list(preprocessor.feature_names_in_)
 
     X = pd.DataFrame([row[features]])
 
     # Transform through the fitted preprocessor, then explain the tree model.
-    preprocessor = model.named_steps["preprocess"]
-    calibrated = model.named_steps["clf"]
+    calibrated = model  # the estimator is the CalibratedClassifierCV itself
     X_trans = preprocessor.transform(X)
     if hasattr(X_trans, "toarray"):  # OneHotEncoder yields a sparse matrix
         X_trans = X_trans.toarray()
@@ -139,8 +146,8 @@ def explain_account(
 
 if __name__ == "__main__":
     artifact = load_artifact()
-    processed = Path("data/processed/features.csv")
-    df = pd.read_csv(processed)
+    # Read raw account rows (with IDs/names) for the demo scoring run.
+    df = pd.read_csv(RAW_DATA_PATH)
     scored = score_accounts(df, artifact)
     print(scored[["account_id", "churn_probability", "churn_flag"]].head(10).to_string(index=False))
 

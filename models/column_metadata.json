@@ -1,0 +1,28 @@
+{
+  "numeric_cols": [
+    "company_size",
+    "acv_usd",
+    "tenure_months",
+    "seats_purchased",
+    "seats_active_last_30d",
+    "seat_utilization_rate",
+    "logins_last_30d",
+    "admin_logins_last_30d",
+    "features_adopted",
+    "mfa_enabled_pct",
+    "api_calls_last_30d",
+    "support_tickets_last_90d",
+    "critical_tickets_last_90d",
+    "nps_score",
+    "qbr_attendance_rate",
+    "exec_sponsor_changed_last_180d",
+    "days_since_last_login",
+    "discount_pct",
+    "payment_delays_last_year",
+    "expansion_revenue_last_year_usd"
+  ],
+  "categorical_cols": [
+    "industry",
+    "contract_type"
+  ]
+}

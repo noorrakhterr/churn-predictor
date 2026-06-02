@@ -19,7 +19,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from explain import FEATURE_LABELS, explain_account, load_artifact, score_accounts
-from preprocess import PROCESSED_PATH, NUMERIC_COLS, CATEGORICAL_COLS
+from preprocess import NUMERIC_COLS, CATEGORICAL_COLS, RAW_DATA_PATH
 
 # ── Page config ──────────────────────────────────────────────────────────────
 
@@ -38,8 +38,11 @@ def get_artifact():
 
 @st.cache_data(show_spinner="Scoring accounts...")
 def get_scored_df():
+    # Read raw account rows for display; the fitted preprocessor carried in the
+    # artifact (models/preprocessor.pkl, loaded by load_artifact) handles all
+    # encoding inside score_accounts — the app never builds an encoder itself.
     artifact = get_artifact()
-    df = pd.read_csv(PROCESSED_PATH)
+    df = pd.read_csv(RAW_DATA_PATH)
     return score_accounts(df, artifact)
 
 
