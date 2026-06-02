@@ -1,9 +1,12 @@
 """
-Cleans raw account data and engineers features for the churn model.
+Loads raw account data and defines the preprocessing pipeline for the churn model.
 
-Product context: feature engineering is where domain knowledge (CSM intuition)
-gets encoded into numbers.  Each feature here maps to a real signal that an
-experienced CSM would use to flag an at-risk account.
+Product context: feature encoding is where domain knowledge (CSM intuition) gets
+turned into numbers a model can use.  All encoding — categorical → one-hot,
+numeric → imputation — lives inside a single scikit-learn ColumnTransformer
+(see `build_preprocessor`).  That guarantees the exact same transform is applied
+at training time and at scoring time, with no manual encoding scattered across
+the codebase.
 """
 
 from __future__ import annotations
@@ -11,25 +14,43 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 
-RAW_PATH = Path("data/raw/accounts.csv")
+RAW_PATH = Path("data/raw/saas_churn.csv")
 PROCESSED_PATH = Path("data/processed/features.csv")
 
-FEATURE_COLS = [
-    "days_since_last_login",
-    "avg_weekly_logins",
-    "feature_adoption_rate",
-    "seat_utilisation",
-    "support_tickets_open",
-    "support_tickets_30d",
+# Column lists derived from the actual dtypes in saas_churn.csv.
+# NUMERIC_COLS  = int/float columns; CATEGORICAL_COLS = object/bool columns.
+# The target ('churned') and ID columns (account_id, company_name) are excluded.
+NUMERIC_COLS = [
+    "company_size",
+    "acv_usd",
+    "tenure_months",
+    "seats_purchased",
+    "seats_active_last_30d",
+    "seat_utilization_rate",
+    "logins_last_30d",
+    "admin_logins_last_30d",
+    "features_adopted",
+    "mfa_enabled_pct",
+    "api_calls_last_30d",
+    "support_tickets_last_90d",
+    "critical_tickets_last_90d",
     "nps_score",
-    "nps_trend",
-    "csm_meetings_90d",
-    "executive_sponsor_engaged",
-    # Engineered
-    "arr_bucket",
-    "support_intensity",
-    "login_recency_flag",
+    "qbr_attendance_rate",
+    "days_since_last_login",
+    "discount_pct",
+    "payment_delays_last_year",
+    "expansion_revenue_last_year_usd",
+]
+
+CATEGORICAL_COLS = [
+    "industry",
+    "contract_type",
+    "exec_sponsor_changed_last_180d",
 ]
 
 TARGET_COL = "churned"
@@ -39,39 +60,52 @@ def load_raw(path: Path = RAW_PATH) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
+def build_preprocessor() -> ColumnTransformer:
+    """
+    The single source of truth for feature encoding.
 
-    # ARR bucket — product insight: SMB churn behaves differently from Enterprise
-    out["arr_bucket"] = pd.cut(
-        out["arr_usd"],
-        bins=[0, 25_000, 75_000, 150_000, float("inf")],
-        labels=["micro", "small", "mid", "large"],
-    ).cat.codes  # ordinal encode
-
-    # Support intensity: ticket rate per month of contract age
-    contract_months_safe = out["contract_months"].clip(lower=1)
-    out["support_intensity"] = out["support_tickets_30d"] / contract_months_safe
-
-    # Binary flag: no login in last 30 days — strongest leading indicator
-    out["login_recency_flag"] = (out["days_since_last_login"] > 30).astype(int)
-
-    # Boolean → int for ML
-    out["executive_sponsor_engaged"] = out["executive_sponsor_engaged"].astype(int)
-
-    return out
+    - Numeric columns: median imputation (covers the nullable nps_score).
+    - Categorical columns: most-frequent imputation + one-hot encoding, with
+      unknown categories ignored at scoring time so unseen values don't crash.
+    """
+    numeric_pipeline = Pipeline(
+        steps=[("impute", SimpleImputer(strategy="median"))]
+    )
+    categorical_pipeline = Pipeline(
+        steps=[
+            ("impute", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
+    return ColumnTransformer(
+        transformers=[
+            ("num", numeric_pipeline, NUMERIC_COLS),
+            ("cat", categorical_pipeline, CATEGORICAL_COLS),
+        ]
+    )
 
 
 def get_features_and_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    X = df[FEATURE_COLS]
+    """
+    Returns the raw (unencoded) feature matrix X and target y.
+
+    Encoding is intentionally NOT done here — it's the ColumnTransformer's job
+    (see `build_preprocessor`), so the same transform applies at train and score.
+    """
+    X = df[NUMERIC_COLS + CATEGORICAL_COLS]
     y = df[TARGET_COL]
     return X, y
 
 
 def run(raw_path: Path = RAW_PATH, out_path: Path = PROCESSED_PATH) -> pd.DataFrame:
+    """
+    Materialize the model-ready table: select the feature + target + ID columns
+    from the raw snapshot and write them to PROCESSED_PATH.  Encoding happens in
+    the model pipeline at fit/predict time, so this file stays human-readable
+    (IDs and raw values intact) for the dashboard.
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df = load_raw(raw_path)
-    df = engineer_features(df)
     df.to_csv(out_path, index=False)
     print(f"Processed {len(df)} rows → {out_path}")
     return df

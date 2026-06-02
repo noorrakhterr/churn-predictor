@@ -19,7 +19,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from explain import FEATURE_LABELS, explain_account, load_artifact, score_accounts
-from preprocess import PROCESSED_PATH, FEATURE_COLS
+from preprocess import PROCESSED_PATH, NUMERIC_COLS, CATEGORICAL_COLS
 
 # ── Page config ──────────────────────────────────────────────────────────────
 
@@ -67,9 +67,9 @@ with st.sidebar:
             step=0.05,
             help="Accounts above this probability are flagged as at-risk.",
         )
-        segment_filter = st.multiselect(
-            "Filter by segment",
-            options=df["segment"].unique().tolist() if "segment" in df.columns else [],
+        industry_filter = st.multiselect(
+            "Filter by industry",
+            options=df["industry"].unique().tolist() if "industry" in df.columns else [],
             default=[],
         )
 
@@ -79,8 +79,8 @@ if not data_loaded:
     st.stop()
 
 filtered = df.copy()
-if segment_filter:
-    filtered = filtered[filtered["segment"].isin(segment_filter)]
+if industry_filter:
+    filtered = filtered[filtered["industry"].isin(industry_filter)]
 filtered["at_risk"] = (filtered["churn_probability"] >= risk_threshold).astype(int)
 
 at_risk = filtered[filtered["at_risk"] == 1]
@@ -90,8 +90,8 @@ at_risk = filtered[filtered["at_risk"] == 1]
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total accounts", len(filtered))
 col2.metric("At-risk accounts", len(at_risk), delta=f"{len(at_risk)/len(filtered):.0%} of portfolio")
-at_risk_arr = at_risk["arr_usd"].sum() if "arr_usd" in at_risk.columns else 0
-col3.metric("ARR at risk", f"${at_risk_arr:,.0f}")
+at_risk_acv = at_risk["acv_usd"].sum() if "acv_usd" in at_risk.columns else 0
+col3.metric("ACV at risk", f"${at_risk_acv:,.0f}")
 col4.metric("Avg risk score (at-risk)", f"{at_risk['churn_probability'].mean():.0%}" if len(at_risk) else "—")
 
 st.divider()
@@ -100,14 +100,14 @@ st.divider()
 
 st.subheader("Save list — prioritised by churn probability")
 
-display_cols = ["company_name", "segment", "arr_usd", "churn_probability", "days_to_renewal"] if all(
-    c in filtered.columns for c in ["company_name", "segment", "arr_usd", "days_to_renewal"]
+display_cols = ["company_name", "industry", "acv_usd", "churn_probability", "contract_type"] if all(
+    c in filtered.columns for c in ["company_name", "industry", "acv_usd", "contract_type"]
 ) else ["account_id", "churn_probability"]
 
 st.dataframe(
     at_risk[display_cols]
     .sort_values("churn_probability", ascending=False)
-    .style.format({"churn_probability": "{:.0%}", "arr_usd": "${:,.0f}"}),
+    .style.format({"churn_probability": "{:.0%}", "acv_usd": "${:,.0f}"}),
     use_container_width=True,
     height=300,
 )
@@ -126,10 +126,10 @@ if len(at_risk) > 0:
     dcol1, dcol2 = st.columns([1, 2])
     with dcol1:
         st.metric("Churn probability", f"{row['churn_probability']:.0%}")
-        if "arr_usd" in row:
-            st.metric("ARR", f"${row['arr_usd']:,.0f}")
-        if "days_to_renewal" in row:
-            st.metric("Days to renewal", int(row["days_to_renewal"]))
+        if "acv_usd" in row:
+            st.metric("ACV", f"${row['acv_usd']:,.0f}")
+        if "tenure_months" in row:
+            st.metric("Tenure (months)", int(row["tenure_months"]))
 
     with dcol2:
         st.markdown("**Top risk drivers**")

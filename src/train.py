@@ -11,6 +11,7 @@ CSMs can trust.  That means:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import joblib
@@ -23,27 +24,43 @@ from sklearn.metrics import (
     precision_recall_curve,
 )
 from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from preprocess import PROCESSED_PATH, get_features_and_target, engineer_features, load_raw, RAW_PATH
+# Make intra-package imports work whether run as `python src/train.py` or
+# `python -m src.train` (mirrors the bootstrap in app/app.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from preprocess import (
+    NUMERIC_COLS,
+    CATEGORICAL_COLS,
+    PROCESSED_PATH,
+    RAW_PATH,
+    build_preprocessor,
+    get_features_and_target,
+    load_raw,
+)
 
 MODEL_PATH = Path("models/churn_model.pkl")
 RANDOM_SEED = 42
 
 
-def build_model() -> CalibratedClassifierCV:
+def build_model() -> Pipeline:
     base = XGBClassifier(
         n_estimators=300,
         max_depth=4,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
-        use_label_encoder=False,
         eval_metric="logloss",
         random_state=RANDOM_SEED,
     )
     # Isotonic calibration so probability outputs are trustworthy
-    return CalibratedClassifierCV(base, method="isotonic", cv=3)
+    calibrated = CalibratedClassifierCV(base, method="isotonic", cv=3)
+    # All encoding lives in the preprocessor, so the model consumes raw columns.
+    return Pipeline(
+        steps=[("preprocess", build_preprocessor()), ("clf", calibrated)]
+    )
 
 
 def choose_threshold(model, X: pd.DataFrame, y: pd.Series) -> float:
@@ -66,8 +83,8 @@ def train(processed_path: Path = PROCESSED_PATH) -> None:
     if processed_path.exists():
         df = pd.read_csv(processed_path)
     else:
-        print("Processed data not found — running preprocessing first.")
-        df = engineer_features(load_raw(RAW_PATH))
+        print("Processed data not found — loading raw data instead.")
+        df = load_raw(RAW_PATH)
 
     X, y = get_features_and_target(df)
 
@@ -87,7 +104,11 @@ def train(processed_path: Path = PROCESSED_PATH) -> None:
     y_pred = (model.predict_proba(X)[:, 1] >= threshold).astype(int)
     print(classification_report(y, y_pred, target_names=["retained", "churned"]))
 
-    artifact = {"model": model, "threshold": threshold, "feature_cols": list(X.columns)}
+    artifact = {
+        "model": model,
+        "threshold": threshold,
+        "feature_cols": NUMERIC_COLS + CATEGORICAL_COLS,
+    }
     joblib.dump(artifact, MODEL_PATH)
     print(f"Model saved → {MODEL_PATH}")
 
