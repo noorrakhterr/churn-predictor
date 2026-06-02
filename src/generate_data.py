@@ -205,6 +205,11 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
     features_term = (12 - features_adopted) / 12.0
     support_term = np.minimum(support_tickets_last_90d, 10) / 10.0
     delays_term = np.minimum(payment_delays_last_year, 5) / 5.0
+    # Interaction: brand-new accounts on month-to-month terms are the classic
+    # honeymoon-churn risk — the combination is riskier than either signal alone.
+    monthly_short_tenure_term = (
+        (contract_type == "Monthly") & (tenure_months < 6)
+    ).astype(float)
 
     logit = (
         1.6 * util_term
@@ -212,9 +217,10 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
         + 0.75 * exec_term  # tuned so exec change ≈ 2x base churn rate
         + 1.1 * crit_term
         + 1.2 * qbr_term
-        + 0.55 * contract_term
+        + 0.85 * contract_term
         + 0.9 * nps_low_term
-        + 1.0 * tenure_term
+        + 1.5 * tenure_term
+        + 1.1 * monthly_short_tenure_term
         + 0.4 * features_term
         + 0.3 * support_term
         + 0.5 * delays_term
