@@ -363,6 +363,38 @@ def print_summary(df: pd.DataFrame) -> None:
     print(f"  nps <6:                {detractors:.1%} vs {promoters:.1%} (>=6)")
 
 
+def generate_accounts(n: int = 50, random_state: int = 42) -> pd.DataFrame:
+    """
+    Generate n synthetic B2B SaaS accounts in memory, without writing to disk.
+
+    Produces an identical schema to saas_churn.csv. Intended for use in
+    deployed environments where the raw CSV is not available (e.g. Streamlit
+    Cloud). Passing the same random_state always returns the same rows.
+
+    Args:
+        n: Number of accounts to generate.
+        random_state: Seed for reproducibility. Fixed seed → fixed output.
+
+    Returns:
+        DataFrame with the same columns as saas_churn.csv, including 'churned'.
+    """
+    global rng, fake  # noqa: PLW0603
+
+    # Swap in seeded instances for the duration of the call, then restore.
+    # generate() reads `rng` and `fake` as free variables, so this is enough
+    # to make it fully deterministic without duplicating the generation logic.
+    old_rng, old_fake = rng, fake
+    rng = np.random.default_rng(random_state)
+    fake = Faker()
+    Faker.seed(random_state)
+    try:
+        df = generate(n)
+    finally:
+        rng, fake = old_rng, old_fake
+
+    return df
+
+
 if __name__ == "__main__":
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     df = generate()

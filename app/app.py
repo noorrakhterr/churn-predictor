@@ -29,7 +29,6 @@ from explain import (
     load_artifact,
     make_recommendation,
 )
-from preprocess import RAW_DATA_PATH
 
 
 def display_image(image_path: str, width_percent: int = 80) -> None:
@@ -341,11 +340,16 @@ def _load_metrics() -> dict:
 
 @st.cache_data
 def _demo_bytes() -> bytes:
-    """Return a reproducible 50-account sample from the raw CSV as bytes."""
-    df = pd.read_csv(RAW_DATA_PATH)
-    rng = np.random.default_rng(42)
-    idx = rng.choice(len(df), size=min(50, len(df)), replace=False)
-    return df.iloc[idx].reset_index(drop=True).to_csv(index=False).encode()
+    """Generate 50 demo accounts in memory and return them as CSV bytes.
+
+    Uses generate_accounts() so no CSV file needs to exist on disk —
+    safe for deployed environments where data/ is gitignored.
+    Fixed random_state=42 ensures the same 50 rows every time.
+    """
+    from src.generate_data import generate_accounts
+
+    df = generate_accounts(n=50, random_state=42)
+    return df.to_csv(index=False).encode()
 
 
 EXPLAINER, PREPROCESSOR, FEATURE_NAMES = _get_artifacts()
@@ -864,8 +868,15 @@ elif active == "portfolio":
             source_label = uploaded.name
         elif use_demo or st.session_state.get("portfolio_demo"):
             csv_bytes = _demo_bytes()
-            source_label = "Demo portfolio (50 accounts)"
-            st.session_state["portfolio_demo"] = True
+            if csv_bytes is None:
+                st.warning(
+                    "Demo data is not available in this deployment. "
+                    "Please upload your own CSV file using the uploader above."
+                )
+                st.session_state["portfolio_demo"] = False
+            else:
+                source_label = "Demo portfolio (50 accounts)"
+                st.session_state["portfolio_demo"] = True
 
         if csv_bytes:
             portfolio_df = _score_portfolio(csv_bytes)
