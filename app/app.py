@@ -55,7 +55,7 @@ def display_image(image_path: str, width_percent: int = 80) -> None:
 
 st.set_page_config(
     page_title="Churn Risk Predictor",
-    page_icon="",
+    page_icon="📊",
     layout="wide",
 )
 
