@@ -1,0 +1,29 @@
+[tool.black]
+line-length    = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length    = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",   # line too long — black handles this
+    "N803",   # argument name should be lowercase (conflicts with sklearn X, y)
+    "N806",   # variable in function should be lowercase (same reason)
+    "UP007",  # use X | Y instead of Optional — keep compat with 3.9
+    "F841",   # local variable assigned but never used (test helpers)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*"  = ["N802", "E402"]   # sys.path.insert before imports; test func names
+"app/*.py" = ["E402"]           # sys.path.insert before imports is intentional
+"src/*.py" = ["E402"]           # same

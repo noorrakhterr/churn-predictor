@@ -1,25 +1,37 @@
-.PHONY: setup train app test format
+.PHONY: setup data preprocess train explain app test format lint all
 
-# Install all dependencies into the active virtual environment
+# ── Environment ───────────────────────────────────────────────────────────────
 setup:
 	pip install --upgrade pip
 	pip install -r requirements.txt
 
-# Generate synthetic data, then train and evaluate the model
-train:
-	python src/generate_data.py
-	python src/preprocess.py
-	python src/train.py
+# ── Pipeline steps ────────────────────────────────────────────────────────────
+data:
+	python -m src.generate_data
 
-# Launch the Streamlit dashboard
+preprocess:
+	python -m src.preprocess
+
+train:
+	python -m src.train
+
+explain:
+	python -m src.explain
+
+# ── App ───────────────────────────────────────────────────────────────────────
 app:
 	streamlit run app/app.py
 
-# Run the test suite
+# ── Quality ───────────────────────────────────────────────────────────────────
 test:
 	pytest tests/ -v
 
-# Auto-format and lint the codebase
 format:
 	black src/ app/ tests/
-	ruff check src/ app/ tests/ --fix
+	ruff check --fix src/ app/ tests/
+
+lint:
+	ruff check src/ app/ tests/
+
+# ── Full pipeline (data → model → explanations) ───────────────────────────────
+all: data preprocess train explain

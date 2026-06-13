@@ -6,14 +6,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
 
 from preprocess import (
     CATEGORICAL_COLS,
     NUMERIC_COLS,
+    RAW_DATA_PATH,
     TARGET_COL,
     build_preprocessor,
     get_features_and_target,
+    identify_column_types,
+    load_data,
+    split_data,
 )
 
 
@@ -45,7 +50,9 @@ def _minimal_df(n: int = 6) -> pd.DataFrame:
                 "critical_tickets_last_90d": int(rng.integers(0, 5)),
                 "nps_score": float(rng.integers(0, 11)),
                 "qbr_attendance_rate": float(rng.uniform(0, 1)),
-                "exec_sponsor_changed_last_180d": bool(rng.integers(0, 2)),
+                # Cast to int so identify_column_types sees a numeric column,
+                # matching what load_data() does before calling it in production.
+                "exec_sponsor_changed_last_180d": int(rng.integers(0, 2)),
                 "days_since_last_login": int(rng.integers(0, 90)),
                 "discount_pct": float(rng.uniform(0, 45)),
                 "payment_delays_last_year": int(rng.integers(0, 12)),
@@ -89,3 +96,65 @@ def test_numeric_imputation_fills_nulls():
     transformed = build_preprocessor().fit_transform(X)
     arr = transformed.toarray() if hasattr(transformed, "toarray") else transformed
     assert not np.isnan(arr).any()
+
+
+# ---------------------------------------------------------------------------
+# New required tests
+# ---------------------------------------------------------------------------
+
+def test_load_data_returns_correct_shapes():
+    X, y = load_data(RAW_DATA_PATH)
+    assert len(X) == len(y), "X and y must have the same number of rows"
+    assert set(y.unique()).issubset({0, 1}), "y must contain only 0/1 values"
+    assert len(X) > 0
+
+
+def test_identify_column_types_separates_correctly():
+    df = _minimal_df()
+    X, _ = get_features_and_target(df)
+    numeric_cols, categorical_cols = identify_column_types(X)
+    # Every declared numeric column must be classified as numeric
+    for col in NUMERIC_COLS:
+        assert col in numeric_cols, f"{col} should be numeric"
+    # Every declared categorical column must be classified as categorical
+    for col in CATEGORICAL_COLS:
+        assert col in categorical_cols, f"{col} should be categorical"
+    # The two lists must be disjoint
+    assert not set(numeric_cols) & set(categorical_cols)
+
+
+def test_split_data_is_stratified():
+    X, y = load_data(RAW_DATA_PATH)
+    X_train, X_test, y_train, y_test = split_data(X, y)
+    train_rate = y_train.mean()
+    test_rate  = y_test.mean()
+    assert abs(train_rate - test_rate) < 0.02, (
+        f"Churn rates diverged: train={train_rate:.4f}, test={test_rate:.4f}"
+    )
+
+
+def test_preprocessor_handles_missing_values():
+    df = _minimal_df(n=10)
+    # Inject NaN into several numeric columns
+    for col in ["nps_score", "seat_utilization_rate", "logins_last_30d"]:
+        df.loc[0, col] = np.nan
+    X, _ = get_features_and_target(df)
+    transformed = build_preprocessor().fit_transform(X)
+    arr = transformed.toarray() if hasattr(transformed, "toarray") else transformed
+    assert not np.isnan(arr).any()
+
+
+def test_preprocessor_handles_unknown_categories():
+    df_train = _minimal_df(n=10)
+    X_train, _ = get_features_and_target(df_train)
+    pre = build_preprocessor().fit(X_train)
+
+    # Build a test row with an industry never seen during fit
+    df_test = _minimal_df(n=1)
+    df_test.loc[0, "industry"] = "Aerospace"  # unknown category
+    X_test, _ = get_features_and_target(df_test)
+
+    # handle_unknown='ignore' means this must not raise
+    result = pre.transform(X_test)
+    arr = result.toarray() if hasattr(result, "toarray") else result
+    assert arr.shape[0] == 1
