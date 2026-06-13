@@ -340,16 +340,11 @@ def _load_metrics() -> dict:
 
 @st.cache_data
 def _demo_bytes() -> bytes:
-    """Generate 50 demo accounts in memory and return them as CSV bytes.
-
-    Uses generate_accounts() so no CSV file needs to exist on disk —
-    safe for deployed environments where data/ is gitignored.
-    Fixed random_state=42 ensures the same 50 rows every time.
-    """
-    from src.generate_data import generate_accounts
-
-    df = generate_accounts(n=50, random_state=42)
-    return df.to_csv(index=False).encode()
+    demo_path = Path(__file__).parent / "data" / "demo_portfolio.csv"
+    if not demo_path.exists():
+        st.error("Demo file not found.")
+        return b""
+    return demo_path.read_bytes()
 
 
 EXPLAINER, PREPROCESSOR, FEATURE_NAMES = _get_artifacts()

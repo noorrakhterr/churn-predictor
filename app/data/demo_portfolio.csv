@@ -1,0 +1,51 @@
+account_id,company_name,company_size,industry,contract_type,acv_usd,tenure_months,seats_purchased,seats_active_last_30d,seat_utilization_rate,logins_last_30d,admin_logins_last_30d,features_adopted,mfa_enabled_pct,api_calls_last_30d,support_tickets_last_90d,critical_tickets_last_90d,nps_score,qbr_attendance_rate,exec_sponsor_changed_last_180d,days_since_last_login,discount_pct,payment_delays_last_year,expansion_revenue_last_year_usd,churned
+ad94ac1d-7941-47ca-9b53-cdcdc57a52d5,Lang-Mercado,392,Telecom,Annual,43494,41,22,12,0.545,69,0,6,52.2,29,3,0,6.0,0.53,False,19,6.9,2,10287,0
+ba7e5187-0687-4365-901a-e28824afe7b0,Lang-Roberts,361,Tech,Annual,21070,15,144,58,0.403,839,56,5,24.8,362,6,0,5.0,0.88,True,11,10.7,0,3143,0
+51be6342-44ea-42b9-8586-2d5c6f67410f,"Mclaughlin, Whitaker and Alvarez",492,Tech,Monthly,47254,5,59,33,0.559,292,16,5,48.8,148,3,0,8.0,0.67,False,2,8.8,0,0,1
+dcf10b87-5fb9-4db5-a151-8c179ee0dae2,Buchanan-Brown,369,Education,Monthly,23823,19,124,69,0.556,579,45,4,57.8,215,4,0,5.0,0.18,True,17,10.5,0,0,0
+162ad767-0a00-413d-944b-336e14d19db0,Scott PLC,139,Manufacturing,Annual,11247,2,13,6,0.462,21,2,6,25.6,55,9,1,6.0,0.52,False,3,8.6,1,0,1
+6fa0352a-d626-4e35-9318-bf52fa7dd384,Bradley-Garner,441,Telecom,Annual,31453,16,177,117,0.661,857,59,9,64.3,2657,1,0,10.0,1.0,False,3,6.5,0,4232,0
+f2e17799-8435-414c-a4d3-cf00fbafe11e,Moore Inc,174,Telecom,Monthly,17567,17,37,23,0.622,141,10,5,80.7,113,1,0,9.0,0.68,False,7,25.6,0,0,0
+6422d5be-c932-4105-a031-ba6ee7a0f497,"Campos, Brock and Marquez",1116,Retail,Multi-year,138139,4,352,242,0.688,1487,92,5,42.5,755,3,0,5.0,0.76,False,44,10.8,0,25836,0
+843e6e18-8690-47bc-b5a2-37ceb1124abc,Carter Ltd,50,Tech,Annual,14964,45,6,4,0.667,28,1,7,88.2,131,2,0,8.0,0.63,False,4,13.7,0,3127,0
+1043663f-dc32-4554-a6d9-d19db967362e,"Tate, Sosa and Hart",277,Manufacturing,Annual,40192,33,31,23,0.742,223,13,8,53.5,420,2,0,10.0,0.7,False,0,6.9,0,11516,0
+033edef1-30fd-44eb-ab90-09ddbf0f2c57,"Patel, Thompson and Payne",3907,Retail,Monthly,129470,3,1601,322,0.201,2374,137,5,36.6,758,12,0,,0.1,False,8,27.8,1,0,1
+9a2cd14c-3db6-4f6e-b49b-b36b905ac326,Martin-Maldonado,140,Media,Annual,16269,3,37,26,0.703,247,15,5,43.9,121,2,0,6.0,0.52,False,17,6.2,0,0,0
+a7bb4b30-9977-4062-86b0-71c976b6d5c6,Miller Ltd,663,Tech,Monthly,62537,8,123,103,0.837,1499,97,9,92.7,2332,0,0,10.0,0.46,False,0,19.8,0,0,1
+aeea3315-43d5-4064-80c5-95f9cc65af85,"Perkins, Holland and Jacobson",1587,Tech,Annual,90734,38,772,226,0.293,643,37,3,6.4,2957,10,3,6.0,0.27,False,22,15.5,1,0,1
+e4d0f03d-9edc-490a-8dc4-e63ab882b0f0,Perez-Spencer,1596,Retail,Annual,117323,27,224,63,0.281,783,53,6,22.2,153,3,1,7.0,0.78,True,5,7.4,1,0,1
+cad091ef-9e98-4d40-8611-73b751fb9bc7,Wells LLC,811,Media,Annual,64756,14,250,69,0.276,190,6,3,55.1,240,6,1,6.0,0.73,False,0,14.4,0,0,0
+ba23e5de-eb2b-4512-ac13-685911fd8233,"Mcneil, Hartman and Flowers",2047,Retail,Annual,72694,19,128,86,0.672,69,1,7,41.5,1786,2,0,8.0,0.94,True,6,19.1,0,0,0
+fe678ebf-d313-4d9e-8f1d-e6da06c3551a,Roberts-Powers,530,Finance,Annual,38029,8,140,103,0.736,501,22,9,31.7,795,6,0,8.0,0.85,False,1,0.0,0,0,0
+2bab5975-9166-41b3-974b-abedb9a6c963,Ellis PLC,128,Telecom,Monthly,19787,31,51,26,0.51,134,9,6,52.6,16,3,0,,0.19,False,15,12.9,0,0,1
+a0551b47-f83d-4d6f-8a1e-b583e60d66fb,Barnett Inc,150,Education,Multi-year,15721,1,42,6,0.143,0,0,0,0.0,12,8,4,4.0,0.31,False,60,7.4,1,0,1
+7ee1afed-e9e6-43e2-a86a-f3fbb1754f61,Morales Ltd,356,Education,Annual,33942,62,32,11,0.344,113,10,9,23.1,385,5,0,7.0,0.86,False,2,17.9,2,0,0
+d427ec18-5db9-4b8e-9a54-912b6da0d353,Gutierrez Inc,511,Manufacturing,Annual,93099,32,224,92,0.411,547,32,6,20.6,1164,3,2,,0.78,False,19,12.8,0,0,1
+d40ee5a4-a001-41fe-af1e-5cb2953439ac,"Love, Hill and Dodson",544,Manufacturing,Monthly,48138,35,84,52,0.619,557,28,6,42.1,230,1,0,7.0,0.39,False,2,8.2,0,0,0
+10987d14-c9bf-4e4e-8324-bd77c5f08f50,"Yang, Smith and Ortiz",1080,Manufacturing,Annual,45185,26,86,41,0.477,441,29,6,49.5,682,5,0,4.0,0.4,False,8,15.3,0,6543,0
+277274cd-e716-4d5d-9e54-c9b99726ad18,Ballard Ltd,798,Telecom,Annual,35396,47,48,8,0.167,10,1,0,51.4,53,5,2,1.0,0.46,True,46,6.0,1,0,1
+50aad263-08e3-4d4c-aa7c-cb71aa3a801c,Meyer Ltd,2396,Tech,Monthly,125808,19,176,88,0.5,1125,63,4,48.8,845,2,0,,0.72,False,3,24.1,0,18179,0
+457ed6f5-fc7d-4cfd-beeb-4f700ef87178,Tapia-Jones,1063,Tech,Annual,211185,42,381,193,0.507,3488,240,6,100.0,3237,3,0,9.0,0.44,False,6,21.0,0,0,0
+24101069-99e2-44d6-897a-a3037f14ddc1,"Brown, Figueroa and Jimenez",255,Education,Annual,60883,27,45,19,0.422,12,2,2,62.8,53,3,0,,0.53,False,4,17.9,3,0,0
+d55a175d-d54c-40dd-8857-95a96b5aeab7,Herring-Smith,313,Healthcare,Monthly,54094,38,65,38,0.585,322,28,8,71.2,1853,2,0,9.0,0.27,True,8,16.5,0,6873,0
+d871a855-51f9-4438-90d7-a29c89c74e62,Franco PLC,970,Manufacturing,Monthly,80040,36,136,79,0.581,895,60,4,48.2,895,5,1,7.0,0.27,False,15,19.9,2,0,0
+85bbf86d-cd67-462d-8525-f446bdf92a57,Williams-Gross,5281,Tech,Annual,228510,8,293,144,0.491,1335,84,4,95.2,3392,3,1,9.0,0.55,False,6,17.1,1,0,0
+53a6174b-9655-44f3-969b-4060b329bce5,Williams PLC,550,Education,Annual,77676,47,119,36,0.303,217,14,4,78.3,752,3,2,4.0,0.39,False,23,12.4,0,0,1
+137f17f7-3830-43e8-b2e4-2475a23afa3b,Oconnor Ltd,3993,Finance,Annual,205714,36,1093,709,0.649,4897,286,10,67.5,14797,3,0,9.0,0.78,False,12,14.5,0,16065,1
+675ec18a-e11b-4dad-8837-7020040c15d2,Richard Group,145,Education,Annual,37547,22,8,4,0.5,41,2,8,17.8,58,0,0,8.0,0.8,False,0,9.3,0,0,0
+a10c75b1-80cc-4709-ab68-a5c5959bef1d,"Contreras, Thompson and Patton",337,Finance,Multi-year,33128,23,100,12,0.12,25,3,0,0.0,74,13,7,4.0,0.0,True,4,12.6,1,0,1
+0485de69-b07c-4f55-8663-4936a9519fd5,"Ramirez, Cox and Rodriguez",187,Education,Multi-year,47888,9,71,53,0.746,202,13,7,64.2,296,3,0,8.0,0.94,False,7,6.2,0,0,0
+09699b72-a7b4-4295-8cac-46d06ab50c06,Phillips-Gregory,160,Education,Multi-year,19899,66,20,7,0.35,0,0,0,1.5,4,8,3,3.0,0.32,True,23,18.8,0,0,0
+affba1bf-0ce2-487e-aa60-4a41b39ba0b8,"Taylor, Phillips and Watkins",1073,Education,Monthly,60152,42,201,160,0.796,2577,146,8,45.4,632,2,0,8.0,0.57,False,0,19.9,0,19651,0
+c16115b4-c186-47e8-a8a7-eb82b0d08090,Short-Ramos,453,Tech,Annual,49741,42,58,29,0.5,401,17,5,55.9,845,1,0,5.0,0.73,False,6,9.4,1,6074,0
+d1859816-b746-4999-9f79-63d632e1a326,Flores-Cobb,720,Manufacturing,Annual,30814,12,341,94,0.276,1169,91,3,40.2,568,2,0,8.0,0.66,False,15,9.1,2,0,1
+a1fc0fad-e8b4-48de-9def-1055de097e7c,"Allen, Brown and Rodriguez",209,Finance,Annual,13871,19,101,53,0.525,354,20,5,13.3,133,8,1,4.0,0.74,False,8,19.3,0,0,0
+531dc4a4-38e7-4c3f-8c74-ad0184d1b464,Cooper PLC,1184,Tech,Annual,59675,85,270,207,0.767,2275,147,6,47.0,3170,4,0,5.0,0.71,False,7,15.9,0,0,0
+1d2b3649-5f77-472d-a614-048c67cc2996,Nguyen-Barrera,805,Media,Annual,70965,2,296,186,0.628,997,58,5,100.0,607,5,0,7.0,0.83,False,6,10.1,0,0,0
+ef20bee4-f3dc-4424-9753-7ed946be3355,Griffin Inc,797,Retail,Annual,37524,16,84,52,0.619,631,31,7,23.3,344,5,0,6.0,0.73,False,22,7.7,2,5227,1
+6a9787db-97ad-444c-894d-d5ee18c2e458,Moore Group,203,Retail,Monthly,48863,38,46,25,0.543,147,7,7,44.0,339,4,0,6.0,0.59,True,4,13.8,0,0,0
+56d8f289-a9dc-4c19-b578-19289a86cb81,Willis LLC,279,Manufacturing,Annual,32032,17,18,7,0.389,50,2,4,79.7,42,4,0,8.0,0.74,False,9,16.1,2,0,0
+e233eb75-b930-4c1e-b3dd-a137f3ac7a31,Williams-Mccoy,414,Education,Monthly,25318,16,149,100,0.671,1532,95,7,48.3,1625,2,0,10.0,0.4,False,6,10.5,1,4102,0
+4e090e72-fdcc-48ab-851d-9a3699d833f2,Cook Inc,230,Media,Annual,46400,19,41,12,0.293,8,0,5,100.0,62,10,3,5.0,0.37,False,2,12.3,0,0,0
+53a2589b-22b3-4367-baf6-c9f9877d9c93,Moss Group,456,Finance,Annual,51190,14,126,42,0.333,324,25,8,56.7,75,6,0,7.0,0.63,False,16,12.1,0,0,0
+856767a4-e222-4ce7-bce5-6f63bc22164f,Graham Inc,2192,Tech,Monthly,229160,7,747,117,0.157,861,65,5,35.6,132,7,0,,0.32,False,2,23.9,1,0,0
