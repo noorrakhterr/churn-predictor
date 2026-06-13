@@ -1,11 +1,5 @@
 # Product Brief — Churn Predictor
 
-**Author:** _Your name_  
-**Status:** Draft  
-**Last updated:** 2026-06-01
-
----
-
 ## Problem Statement
 
 ### Who is the customer?
@@ -21,8 +15,7 @@ react after a churn notice has already been submitted.
 ### What is the pain today?
 
 - Account health is tracked manually in spreadsheets or CRM notes.
-- CSMs rely on gut feel and relationship signals, missing product-usage patterns.
-- By the time an account goes quiet, the renewal window is often < 30 days.
+- CSMs rely on gut feel and relationship signals, or have to manually check in on data, missing product-usage patterns and overlapping data indicators
 - Leadership has no portfolio-level view of churn risk heading into a quarter.
 
 ---
