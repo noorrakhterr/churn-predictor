@@ -23,11 +23,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from explain import (
-    load_artifact,
-    explain_prediction,
-    make_recommendation,
-    clean_feature_name,
     _parse_feat,
+    clean_feature_name,
+    explain_prediction,
+    load_artifact,
+    make_recommendation,
 )
 from preprocess import RAW_DATA_PATH
 
@@ -51,7 +51,7 @@ def display_image(image_path: str, width_percent: int = 80) -> None:
         st.warning(f"Image not found: {image_path}")
 
 
-#  Page config 
+#  Page config
 
 st.set_page_config(
     page_title="Churn Risk Predictor",
@@ -59,7 +59,7 @@ st.set_page_config(
     layout="wide",
 )
 
-#  CSS 
+#  CSS
 
 st.markdown(
     '<link href="https://fonts.googleapis.com/css2?family=Inter+Tight'
@@ -76,7 +76,8 @@ st.markdown(
 # Text sec  #82A1E8  captions, placeholders
 # Base unit 4px
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 /*  Base & font  */
 html, body, [class*="css"] {
@@ -107,7 +108,7 @@ h1, h2, h3, h4, h5, h6,
     font-family: 'Inter Tight', sans-serif !important;
     font-weight: 600 !important;
     border-radius: 4px !important;
-    border: 1.5px solid #000000 !important;
+    border: 1px solid #000000 !important;
     background: #FFFFFF !important;
     color: #000000 !important;
     transition: background 0.15s, color 0.15s !important;
@@ -180,11 +181,18 @@ button[data-testid="baseButton-primary"]:hover {
     border-radius: 4px !important;
     background: #FFFFFF !important;
     margin-bottom: 4px !important;
+    overflow: hidden !important;
+}
+[data-testid="stExpander"] > details,
+[data-testid="stExpander"] > div > details {
+    border-radius: 4px !important;
+    overflow: hidden !important;
 }
 [data-testid="stExpander"] summary {
     font-family: 'Inter Tight', sans-serif !important;
     font-weight: 700 !important;
     color: #000000 !important;
+    border-radius: 4px 4px 0 0 !important;
 }
 [data-testid="stExpander"] summary p,
 [data-testid="stExpander"] summary span {
@@ -222,7 +230,7 @@ button[data-testid="baseButton-primary"]:hover {
     font-weight: 600 !important;
     border-radius: 4px !important;
     background: #FFFFFF !important;
-    border: 1.5px solid #CFCFCF !important;
+    border: 1px solid #CFCFCF !important;
     color: #000000 !important;
     height: 83px !important;
     width: 100% !important;
@@ -243,7 +251,7 @@ section[data-testid="stFileUploaderDropzone"] {
     background-color: #FFFFFF !important;
 }
 [data-testid="stFileUploaderDropzone"] {
-    border: 1.5px solid #CFCFCF !important;
+    border: 1px solid #CFCFCF !important;
     border-radius: 4px !important;
 }
 
@@ -310,13 +318,17 @@ hr { border-color: #CFCFCF !important; border-top-width: 1px !important; }
 .disclaimer { color: #82A1E8; font-size: .75rem; font-family: 'Inter Tight', sans-serif; }
 .subhead    { color: #82A1E8; font-size: .875rem; margin-top: -4px; margin-bottom: 16px; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-#  Artifact & data loading 
+#  Artifact & data loading
+
 
 @st.cache_resource(show_spinner="Loading model and explainer…")
 def _get_artifacts():
     import explain as expl
+
     expl._load_artifacts()
     return expl._explainer, expl._preprocessor, list(expl._feature_names)
 
@@ -337,88 +349,131 @@ def _demo_bytes() -> bytes:
 
 
 EXPLAINER, PREPROCESSOR, FEATURE_NAMES = _get_artifacts()
-METRICS  = _load_metrics()
+METRICS = _load_metrics()
 ARTIFACT = load_artifact()
 
-INDUSTRIES     = ["Education", "Finance", "Healthcare", "Manufacturing",
-                  "Media", "Retail", "Tech", "Telecom"]
+INDUSTRIES = [
+    "Education",
+    "Finance",
+    "Healthcare",
+    "Manufacturing",
+    "Media",
+    "Retail",
+    "Tech",
+    "Telecom",
+]
 CONTRACT_TYPES = ["Annual", "Monthly", "Multi-year"]
 
-#  Preset scenarios 
+#  Preset scenarios
 
 PRESETS: dict[str, dict] = {
     "healthy": {
-        "industry": "Tech", "company_size": 500, "contract_type": "Multi-year",
-        "tenure_months": 36, "acv_usd": 60000,
-        "seats_purchased": 100, "seats_active_last_30d": 88, "seat_util_pct": 88,
-        "logins_last_30d": 820, "admin_logins_last_30d": 45, "features_adopted": 9,
-        "mfa_enabled_pct": 85, "api_calls_last_30d": 4200,
-        "support_tickets_last_90d": 1, "critical_tickets_last_90d": 0,
-        "nps_score": 9, "qbr_attendance_pct": 90,
-        "exec_sponsor_changed": False, "days_since_last_login": 2,
-        "discount_pct": 5, "payment_delays_last_year": 0,
+        "industry": "Tech",
+        "company_size": 500,
+        "contract_type": "Multi-year",
+        "tenure_months": 36,
+        "acv_usd": 60000,
+        "seats_purchased": 100,
+        "seats_active_last_30d": 88,
+        "seat_util_pct": 88,
+        "logins_last_30d": 820,
+        "admin_logins_last_30d": 45,
+        "features_adopted": 9,
+        "mfa_enabled_pct": 85,
+        "api_calls_last_30d": 4200,
+        "support_tickets_last_90d": 1,
+        "critical_tickets_last_90d": 0,
+        "nps_score": 9,
+        "qbr_attendance_pct": 90,
+        "exec_sponsor_changed": False,
+        "days_since_last_login": 2,
+        "discount_pct": 5,
+        "payment_delays_last_year": 0,
         "expansion_revenue_last_year_usd": 12000,
     },
     "at_risk": {
-        "industry": "Retail", "company_size": 250, "contract_type": "Monthly",
-        "tenure_months": 18, "acv_usd": 28000,
-        "seats_purchased": 60, "seats_active_last_30d": 35, "seat_util_pct": 58,
-        "logins_last_30d": 310, "admin_logins_last_30d": 12, "features_adopted": 5,
-        "mfa_enabled_pct": 40, "api_calls_last_30d": 900,
-        "support_tickets_last_90d": 3, "critical_tickets_last_90d": 0,
-        "nps_score": 6, "qbr_attendance_pct": 55,
-        "exec_sponsor_changed": False, "days_since_last_login": 18,
-        "discount_pct": 10, "payment_delays_last_year": 1,
+        "industry": "Retail",
+        "company_size": 250,
+        "contract_type": "Monthly",
+        "tenure_months": 18,
+        "acv_usd": 28000,
+        "seats_purchased": 60,
+        "seats_active_last_30d": 35,
+        "seat_util_pct": 58,
+        "logins_last_30d": 310,
+        "admin_logins_last_30d": 12,
+        "features_adopted": 5,
+        "mfa_enabled_pct": 40,
+        "api_calls_last_30d": 900,
+        "support_tickets_last_90d": 3,
+        "critical_tickets_last_90d": 0,
+        "nps_score": 6,
+        "qbr_attendance_pct": 55,
+        "exec_sponsor_changed": False,
+        "days_since_last_login": 18,
+        "discount_pct": 10,
+        "payment_delays_last_year": 1,
         "expansion_revenue_last_year_usd": 0,
     },
     "critical": {
-        "industry": "Retail", "company_size": 180, "contract_type": "Monthly",
-        "tenure_months": 4, "acv_usd": 18000,
-        "seats_purchased": 40, "seats_active_last_30d": 14, "seat_util_pct": 35,
-        "logins_last_30d": 95, "admin_logins_last_30d": 3, "features_adopted": 2,
-        "mfa_enabled_pct": 10, "api_calls_last_30d": 120,
-        "support_tickets_last_90d": 6, "critical_tickets_last_90d": 3,
-        "nps_score": 3, "qbr_attendance_pct": 25,
-        "exec_sponsor_changed": True, "days_since_last_login": 47,
-        "discount_pct": 15, "payment_delays_last_year": 2,
+        "industry": "Retail",
+        "company_size": 180,
+        "contract_type": "Monthly",
+        "tenure_months": 4,
+        "acv_usd": 18000,
+        "seats_purchased": 40,
+        "seats_active_last_30d": 14,
+        "seat_util_pct": 35,
+        "logins_last_30d": 95,
+        "admin_logins_last_30d": 3,
+        "features_adopted": 2,
+        "mfa_enabled_pct": 10,
+        "api_calls_last_30d": 120,
+        "support_tickets_last_90d": 6,
+        "critical_tickets_last_90d": 3,
+        "nps_score": 3,
+        "qbr_attendance_pct": 25,
+        "exec_sponsor_changed": True,
+        "days_since_last_login": 47,
+        "discount_pct": 15,
+        "payment_delays_last_year": 2,
         "expansion_revenue_last_year_usd": 0,
     },
 }
 
-#  Helpers 
+#  Helpers
+
 
 def _to_customer(inp: dict) -> dict:
     """Convert UI-scale form inputs to model feature dict."""
     return {
-        "industry":                      inp["industry"],
-        "company_size":                  inp["company_size"],
-        "contract_type":                 inp["contract_type"],
-        "tenure_months":                 inp["tenure_months"],
-        "acv_usd":                       float(inp["acv_usd"]),
-        "seats_purchased":               inp["seats_purchased"],
-        "seats_active_last_30d":         inp["seats_active_last_30d"],
-        "seat_utilization_rate":         inp["seat_util_pct"] / 100.0,
-        "logins_last_30d":               inp["logins_last_30d"],
-        "admin_logins_last_30d":         inp["admin_logins_last_30d"],
-        "features_adopted":              inp["features_adopted"],
-        "mfa_enabled_pct":               inp["mfa_enabled_pct"],
-        "api_calls_last_30d":            inp["api_calls_last_30d"],
-        "support_tickets_last_90d":      inp["support_tickets_last_90d"],
-        "critical_tickets_last_90d":     inp["critical_tickets_last_90d"],
-        "nps_score":                     inp["nps_score"],
-        "qbr_attendance_rate":           inp["qbr_attendance_pct"] / 100.0,
+        "industry": inp["industry"],
+        "company_size": inp["company_size"],
+        "contract_type": inp["contract_type"],
+        "tenure_months": inp["tenure_months"],
+        "acv_usd": float(inp["acv_usd"]),
+        "seats_purchased": inp["seats_purchased"],
+        "seats_active_last_30d": inp["seats_active_last_30d"],
+        "seat_utilization_rate": inp["seat_util_pct"] / 100.0,
+        "logins_last_30d": inp["logins_last_30d"],
+        "admin_logins_last_30d": inp["admin_logins_last_30d"],
+        "features_adopted": inp["features_adopted"],
+        "mfa_enabled_pct": inp["mfa_enabled_pct"],
+        "api_calls_last_30d": inp["api_calls_last_30d"],
+        "support_tickets_last_90d": inp["support_tickets_last_90d"],
+        "critical_tickets_last_90d": inp["critical_tickets_last_90d"],
+        "nps_score": inp["nps_score"],
+        "qbr_attendance_rate": inp["qbr_attendance_pct"] / 100.0,
         "exec_sponsor_changed_last_180d": int(inp["exec_sponsor_changed"]),
-        "days_since_last_login":         inp["days_since_last_login"],
-        "discount_pct":                  inp["discount_pct"],
-        "payment_delays_last_year":      inp["payment_delays_last_year"],
+        "days_since_last_login": inp["days_since_last_login"],
+        "discount_pct": inp["discount_pct"],
+        "payment_delays_last_year": inp["payment_delays_last_year"],
         "expansion_revenue_last_year_usd": float(inp["expansion_revenue_last_year_usd"]),
     }
 
 
 def _risk_color(tier: str) -> str:
     return {"Low": "#22C55E", "Medium": "#EAB308", "High": "#EF4444"}.get(tier, "#6B7280")
-
-
 
 
 @st.cache_data(show_spinner="Scoring portfolio…")
@@ -441,46 +496,44 @@ def _score_portfolio(csv_bytes: bytes) -> pd.DataFrame | None:
         sv_all = sv_all[1]
 
     _QUICK = {
-        "Seat Utilization":      "Run enablement session + licence review",
-        "Exec Sponsor Change":   "Book intro call with new sponsor (14d)",
+        "Seat Utilization": "Run enablement session + licence review",
+        "Exec Sponsor Change": "Book intro call with new sponsor (14d)",
         "Days Since Last Login": "Re-engagement outreach to admin team",
-        "QBR Attendance Rate":   "Offer async format; shorten cadence",
+        "QBR Attendance Rate": "Offer async format; shorten cadence",
         "Critical Support Tickets": "Executive escalation review",
-        "NPS Score":             "Discovery call — 90-day improvement plan",
-        "Contract Type":         "Annual contract conversation at next QBR",
-        "Customer Tenure":       "Onboarding health check",
+        "NPS Score": "Discovery call — 90-day improvement plan",
+        "Contract Type": "Annual contract conversation at next QBR",
+        "Customer Tenure": "Onboarding health check",
     }
 
     rows = []
     for i in range(len(df)):
-        row  = df.iloc[i]
+        row = df.iloc[i]
         prob = float(probs[i])
         tier = "High" if prob >= 0.70 else ("Medium" if prob >= 0.30 else "Low")
 
         # Top positive-SHAP feature for this account
-        sv   = sv_all[i]
-        top_idx  = int(np.argmax(sv))
+        sv = sv_all[i]
+        top_idx = int(np.argmax(sv))
         top_feat = FEATURE_NAMES[top_idx]
         top_col, _ = _parse_feat(top_feat)
         top_display = clean_feature_name(top_col)
         action = _QUICK.get(top_display, "Schedule discovery call")
 
-        rows.append({
-            "Account":       row.get("company_name", row.get("account_id", f"ACC-{i:04d}")),
-            "Industry":      row.get("industry", "—"),
-            "ARR ($)":       float(row.get("acv_usd", 0)),
-            "Tenure (mo)":   int(row.get("tenure_months", 0)),
-            "Risk Score":    round(prob * 100, 1),
-            "Risk Tier":     tier,
-            "Top Risk Factor": top_display,
-            "Suggested Action": action,
-        })
+        rows.append(
+            {
+                "Account": row.get("company_name", row.get("account_id", f"ACC-{i:04d}")),
+                "Industry": row.get("industry", "—"),
+                "ARR ($)": float(row.get("acv_usd", 0)),
+                "Tenure (mo)": int(row.get("tenure_months", 0)),
+                "Risk Score": round(prob * 100, 1),
+                "Risk Tier": tier,
+                "Top Risk Factor": top_display,
+                "Suggested Action": action,
+            }
+        )
 
-    return (
-        pd.DataFrame(rows)
-        .sort_values("Risk Score", ascending=False)
-        .reset_index(drop=True)
-    )
+    return pd.DataFrame(rows).sort_values("Risk Score", ascending=False).reset_index(drop=True)
 
 
 def _action_plan_txt(portfolio_df: pd.DataFrame) -> str:
@@ -504,13 +557,13 @@ def _color_rows(row: pd.Series):
     return [f"background-color: {bg}"] * len(row)
 
 
-#  Navigation 
+#  Navigation
 
 active = st.query_params.get("tab", "scorer")
 
 
 def _nav(label: str, tid: str) -> str:
-    weight    = "700" if active == tid else "500"
+    weight = "700" if active == tid else "500"
     underline = (
         "border-bottom:2px solid #000000;"
         if active == tid
@@ -543,9 +596,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 
+#
 # TAB 1 — Individual Account Scorer
-# 
+#
 
 if active == "scorer":
     if "preset" not in st.session_state:
@@ -562,59 +615,64 @@ if active == "scorer":
         p = PRESETS[st.session_state.preset]
 
         with st.expander(" Account Profile", expanded=False):
-            industry      = st.selectbox("Industry", INDUSTRIES,
-                                         index=INDUSTRIES.index(p["industry"]))
-            company_size  = st.slider("Company size (employees)", 50, 5000,
-                                      p["company_size"], step=50)
-            contract_type = st.radio("Contract type", CONTRACT_TYPES,
-                                     index=CONTRACT_TYPES.index(p["contract_type"]),
-                                     horizontal=True)
+            industry = st.selectbox("Industry", INDUSTRIES, index=INDUSTRIES.index(p["industry"]))
+            company_size = st.slider(
+                "Company size (employees)", 50, 5000, p["company_size"], step=50
+            )
+            contract_type = st.radio(
+                "Contract type",
+                CONTRACT_TYPES,
+                index=CONTRACT_TYPES.index(p["contract_type"]),
+                horizontal=True,
+            )
             tenure_months = st.slider("Tenure (months)", 1, 120, p["tenure_months"])
-            acv_usd       = st.number_input("Annual contract value ($)",
-                                            5000, 500_000, p["acv_usd"], step=1000)
+            acv_usd = st.number_input(
+                "Annual contract value ($)", 5000, 500_000, p["acv_usd"], step=1000
+            )
 
         with st.expander(" Product Usage"):
-            seats_purchased     = st.slider("Seats purchased", 5, 500,
-                                            p["seats_purchased"])
-            seats_active        = st.slider("Active seats (last 30d)", 0,
-                                            seats_purchased,
-                                            min(p["seats_active_last_30d"],
-                                                seats_purchased))
-            seat_util_pct       = st.slider("Seat utilization (%)", 0, 100,
-                                            p["seat_util_pct"])
-            logins              = st.slider("Logins (last 30d)", 0, 5000,
-                                            p["logins_last_30d"], step=10)
-            admin_logins        = st.slider("Admin logins (last 30d)", 0, 200,
-                                            p["admin_logins_last_30d"])
-            features_adopted    = st.slider("Features adopted", 0, 12,
-                                            p["features_adopted"])
-            mfa_pct             = st.slider("MFA enabled (%)", 0, 100,
-                                            p["mfa_enabled_pct"])
-            api_calls           = st.number_input("API calls (last 30d)",
-                                                  0, 50_000,
-                                                  p["api_calls_last_30d"], step=100)
+            seats_purchased = st.slider("Seats purchased", 5, 500, p["seats_purchased"])
+            seats_active = st.slider(
+                "Active seats (last 30d)",
+                0,
+                seats_purchased,
+                min(p["seats_active_last_30d"], seats_purchased),
+            )
+            seat_util_pct = st.slider("Seat utilization (%)", 0, 100, p["seat_util_pct"])
+            logins = st.slider("Logins (last 30d)", 0, 5000, p["logins_last_30d"], step=10)
+            admin_logins = st.slider("Admin logins (last 30d)", 0, 200, p["admin_logins_last_30d"])
+            features_adopted = st.slider("Features adopted", 0, 12, p["features_adopted"])
+            mfa_pct = st.slider("MFA enabled (%)", 0, 100, p["mfa_enabled_pct"])
+            api_calls = st.number_input(
+                "API calls (last 30d)", 0, 50_000, p["api_calls_last_30d"], step=100
+            )
 
         with st.expander(" Engagement & Health"):
-            support_tickets  = st.slider("Support tickets (last 90d)", 0, 15,
-                                         p["support_tickets_last_90d"])
-            critical_tickets = st.slider("Critical tickets (last 90d)", 0, 7,
-                                         p["critical_tickets_last_90d"])
-            nps_score        = st.slider("NPS score", 0, 10, p["nps_score"])
-            qbr_pct          = st.slider("QBR attendance (%)", 0, 100,
-                                         p["qbr_attendance_pct"])
-            exec_changed     = st.toggle("Exec sponsor changed (last 180d)",
-                                         value=p["exec_sponsor_changed"])
-            days_login       = st.slider("Days since last login", 0, 180,
-                                         p["days_since_last_login"])
+            support_tickets = st.slider(
+                "Support tickets (last 90d)", 0, 15, p["support_tickets_last_90d"]
+            )
+            critical_tickets = st.slider(
+                "Critical tickets (last 90d)", 0, 7, p["critical_tickets_last_90d"]
+            )
+            nps_score = st.slider("NPS score", 0, 10, p["nps_score"])
+            qbr_pct = st.slider("QBR attendance (%)", 0, 100, p["qbr_attendance_pct"])
+            exec_changed = st.toggle(
+                "Exec sponsor changed (last 180d)", value=p["exec_sponsor_changed"]
+            )
+            days_login = st.slider("Days since last login", 0, 180, p["days_since_last_login"])
 
         with st.expander(" Commercial"):
-            discount_pct    = st.slider("Discount (%)", 0, 50, p["discount_pct"])
-            payment_delays  = st.slider("Payment delays (last year)", 0, 5,
-                                        p["payment_delays_last_year"])
-            expansion_rev   = st.number_input("Expansion revenue last year ($)",
-                                              0, 200_000,
-                                              p["expansion_revenue_last_year_usd"],
-                                              step=500)
+            discount_pct = st.slider("Discount (%)", 0, 50, p["discount_pct"])
+            payment_delays = st.slider(
+                "Payment delays (last year)", 0, 5, p["payment_delays_last_year"]
+            )
+            expansion_rev = st.number_input(
+                "Expansion revenue last year ($)",
+                0,
+                200_000,
+                p["expansion_revenue_last_year_usd"],
+                step=500,
+            )
 
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
         st.markdown(
@@ -624,43 +682,54 @@ if active == "scorer":
             unsafe_allow_html=True,
         )
         pc1, pc2, pc3 = st.columns(3)
-        if pc1.button("Healthy",  use_container_width=True):
-            st.session_state.preset = "healthy";  st.session_state.explanation = None
-        if pc2.button("At-Risk",  use_container_width=True):
-            st.session_state.preset = "at_risk";  st.session_state.explanation = None
+        if pc1.button("Healthy", use_container_width=True):
+            st.session_state.preset = "healthy"
+            st.session_state.explanation = None
+        if pc2.button("At-Risk", use_container_width=True):
+            st.session_state.preset = "at_risk"
+            st.session_state.explanation = None
         if pc3.button("Critical", use_container_width=True):
-            st.session_state.preset = "critical"; st.session_state.explanation = None
+            st.session_state.preset = "critical"
+            st.session_state.explanation = None
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        score_btn = st.button("Score", type="primary",
-                              use_container_width=True)
+        score_btn = st.button("Score", type="primary", use_container_width=True)
 
         if score_btn:
             raw_inputs = {
-                "industry": industry, "company_size": company_size,
-                "contract_type": contract_type, "tenure_months": tenure_months,
-                "acv_usd": int(acv_usd), "seats_purchased": seats_purchased,
-                "seats_active_last_30d": seats_active, "seat_util_pct": seat_util_pct,
-                "logins_last_30d": logins, "admin_logins_last_30d": admin_logins,
-                "features_adopted": features_adopted, "mfa_enabled_pct": mfa_pct,
+                "industry": industry,
+                "company_size": company_size,
+                "contract_type": contract_type,
+                "tenure_months": tenure_months,
+                "acv_usd": int(acv_usd),
+                "seats_purchased": seats_purchased,
+                "seats_active_last_30d": seats_active,
+                "seat_util_pct": seat_util_pct,
+                "logins_last_30d": logins,
+                "admin_logins_last_30d": admin_logins,
+                "features_adopted": features_adopted,
+                "mfa_enabled_pct": mfa_pct,
                 "api_calls_last_30d": int(api_calls),
                 "support_tickets_last_90d": support_tickets,
                 "critical_tickets_last_90d": critical_tickets,
-                "nps_score": nps_score, "qbr_attendance_pct": qbr_pct,
+                "nps_score": nps_score,
+                "qbr_attendance_pct": qbr_pct,
                 "exec_sponsor_changed": exec_changed,
-                "days_since_last_login": days_login, "discount_pct": discount_pct,
+                "days_since_last_login": days_login,
+                "discount_pct": discount_pct,
                 "payment_delays_last_year": payment_delays,
                 "expansion_revenue_last_year_usd": int(expansion_rev),
             }
             customer = _to_customer(raw_inputs)
             with st.spinner("Computing churn probability and SHAP values…"):
-                st.session_state.explanation   = explain_prediction(customer)
+                st.session_state.explanation = explain_prediction(customer)
                 st.session_state.customer_dict = customer
 
-    #  Right column: results 
+    #  Right column: results
     with right:
         if st.session_state.explanation is None:
-            st.markdown("""
+            st.markdown(
+                """
             <div class="empty-state">
               <div style="text-align:center;color:#000000;font-family:'Inter Tight',sans-serif;">
                 <div style="font-size:2.5rem;margin-bottom:8px;"></div>
@@ -669,14 +738,16 @@ if active == "scorer":
                 </div>
               </div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         else:
-            exp      = st.session_state.explanation
+            exp = st.session_state.explanation
             customer = st.session_state.customer_dict
-            prob     = exp["churn_probability"]
-            tier     = exp["risk_tier"]
-            rf       = exp["top_risk_factors"]
-            pf       = exp["top_protective_factors"]
+            prob = exp["churn_probability"]
+            tier = exp["risk_tier"]
+            rf = exp["top_risk_factors"]
+            pf = exp["top_protective_factors"]
 
             # 1  Score card
             color = _risk_color(tier)
@@ -703,20 +774,26 @@ if active == "scorer":
 
             st.markdown("#### Top risk factors")
             for f in rf[:3]:
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                 <div class="factor-card">
                   <div style="font-weight:700;font-size:.875rem;color:#000000;font-family:'Inter Tight',sans-serif;">{f['feature']}</div>
                   <div style="font-size:.8rem;color:#000000;margin:4px 0;font-family:'Inter Tight',sans-serif;">{f['impact']}</div>
-                </div>""", unsafe_allow_html=True)
+                </div>""",
+                    unsafe_allow_html=True,
+                )
 
             if pf:
                 st.markdown("#### Protective factors")
                 for f in pf[:2]:
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                     <div class="factor-card protective">
                       <div style="font-weight:700;font-size:.875rem;color:#000000;font-family:'Inter Tight',sans-serif;">{f['feature']}</div>
                       <div style="font-size:.8rem;color:#000000;font-family:'Inter Tight',sans-serif;">{f['impact']}</div>
-                    </div>""", unsafe_allow_html=True)
+                    </div>""",
+                        unsafe_allow_html=True,
+                    )
 
             st.markdown("---")
 
@@ -726,17 +803,20 @@ if active == "scorer":
             for rec in recs[:4]:
                 tf = rec.get("timeframe", "")
                 tf_cls = f"tf-{tf.replace(' ', '-').lower()}" if tf else ""
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                 <div class="action-card">
                   <div class="tf-label {tf_cls}">{tf}</div>
                   <div style="font-size:.875rem;color:#000000;margin-bottom:4px;font-family:'Inter Tight',sans-serif;">{rec['action']}</div>
                   <div style="font-size:.75rem;color:#82A1E8;font-style:italic;font-family:'Inter Tight',sans-serif;">{rec['internal']}</div>
-                </div>""", unsafe_allow_html=True)
+                </div>""",
+                    unsafe_allow_html=True,
+                )
 
 
-# 
+#
 # TAB 2 — Portfolio Scorer
-# 
+#
 
 elif active == "portfolio":
     _, _pcol, _ = st.columns([0.1, 0.8, 0.1])
@@ -749,20 +829,22 @@ elif active == "portfolio":
         )
 
         # Template download
-        template_cols = (["company_name", "account_id"]
-                         + list(PREPROCESSOR.feature_names_in_))
+        template_cols = ["company_name", "account_id"] + list(PREPROCESSOR.feature_names_in_)
         template_csv = pd.DataFrame(columns=template_cols).to_csv(index=False).encode()
         _dl_col, _up_col = st.columns([1, 1])
         with _dl_col:
-            st.download_button(" Download CSV template", template_csv,
-                               file_name="churn_portfolio_template.csv",
-                               mime="text/csv",
-                               use_container_width=True)
+            st.download_button(
+                " Download CSV template",
+                template_csv,
+                file_name="churn_portfolio_template.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
         with _up_col:
-            uploaded = st.file_uploader("Upload portfolio CSV", type="csv",
-                                        label_visibility="collapsed")
+            uploaded = st.file_uploader(
+                "Upload portfolio CSV", type="csv", label_visibility="collapsed"
+            )
 
-        
         _, _b2, _ = st.columns([1.5, 1, 1.5])
         with _b2:
             st.markdown(
@@ -771,18 +853,17 @@ elif active == "portfolio":
                 '<span class="demo-btn"></span>',
                 unsafe_allow_html=True,
             )
-            use_demo = st.button("Use demo portfolio (50 accounts)",
-                                 use_container_width=True)
+            use_demo = st.button("Use demo portfolio (50 accounts)", use_container_width=True)
 
-        st.markdown("---") 
-        
+        st.markdown("---")
+
         csv_bytes: bytes | None = None
         source_label = ""
         if uploaded is not None:
-            csv_bytes   = uploaded.read()
+            csv_bytes = uploaded.read()
             source_label = uploaded.name
         elif use_demo or st.session_state.get("portfolio_demo"):
-            csv_bytes   = _demo_bytes()
+            csv_bytes = _demo_bytes()
             source_label = "Demo portfolio (50 accounts)"
             st.session_state["portfolio_demo"] = True
 
@@ -791,10 +872,12 @@ elif active == "portfolio":
 
             if portfolio_df is None:
                 source_df = pd.read_csv(io.BytesIO(csv_bytes))
-                required  = list(PREPROCESSOR.feature_names_in_)
-                missing   = [c for c in required if c not in source_df.columns]
-                st.error(f"CSV is missing required columns: {', '.join(missing[:8])}…  "
-                         f"Download the template above for the correct schema.")
+                required = list(PREPROCESSOR.feature_names_in_)
+                missing = [c for c in required if c not in source_df.columns]
+                st.error(
+                    f"CSV is missing required columns: {', '.join(missing[:8])}…  "
+                    f"Download the template above for the correct schema."
+                )
             else:
                 source_df = pd.read_csv(io.BytesIO(csv_bytes))
 
@@ -806,43 +889,53 @@ elif active == "portfolio":
                 )
 
                 #  Headline metrics
-                n_total  = len(portfolio_df)
-                n_high   = (portfolio_df["Risk Tier"] == "High").sum()
+                n_total = len(portfolio_df)
+                n_high = (portfolio_df["Risk Tier"] == "High").sum()
                 n_medium = (portfolio_df["Risk Tier"] == "Medium").sum()
-                acv_at_risk = portfolio_df.loc[
-                    portfolio_df["Risk Tier"] == "High", "ARR ($)"
-                ].sum()
+                acv_at_risk = portfolio_df.loc[portfolio_df["Risk Tier"] == "High", "ARR ($)"].sum()
 
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Total accounts",  n_total)
-                m2.metric(" High Risk",    n_high,
-                          delta=f"{n_high/n_total:.0%} of portfolio",
-                          delta_color="off")
-                m3.metric(" Medium Risk",  n_medium,
-                          delta=f"{n_medium/n_total:.0%} of portfolio",
-                          delta_color="off")
-                m4.metric(" ARR at Risk",  f"${acv_at_risk:,.0f}")
+                m1.metric("Total accounts", n_total)
+                m2.metric(
+                    " High Risk",
+                    n_high,
+                    delta=f"{n_high/n_total:.0%} of portfolio",
+                    delta_color="off",
+                )
+                m3.metric(
+                    " Medium Risk",
+                    n_medium,
+                    delta=f"{n_medium/n_total:.0%} of portfolio",
+                    delta_color="off",
+                )
+                m4.metric(" ARR at Risk", f"${acv_at_risk:,.0f}")
 
                 st.markdown("---")
 
-                #  Visualisations 
+                #  Visualisations
                 vc1, vc2 = st.columns(2)
 
                 with vc1:
-                    tier_counts = (portfolio_df["Risk Tier"]
-                                   .value_counts()
-                                   .reindex(["High", "Medium", "Low"], fill_value=0))
-                    fig_dist = go.Figure(go.Bar(
-                        x=tier_counts.index.tolist(),
-                        y=tier_counts.values.tolist(),
-                        marker_color=["#EF4444", "#EAB308", "#22C55E"],
-                        text=tier_counts.values.tolist(),
-                        textposition="outside",
-                    ))
+                    tier_counts = (
+                        portfolio_df["Risk Tier"]
+                        .value_counts()
+                        .reindex(["High", "Medium", "Low"], fill_value=0)
+                    )
+                    fig_dist = go.Figure(
+                        go.Bar(
+                            x=tier_counts.index.tolist(),
+                            y=tier_counts.values.tolist(),
+                            marker_color=["#EF4444", "#EAB308", "#22C55E"],
+                            text=tier_counts.values.tolist(),
+                            textposition="outside",
+                        )
+                    )
                     fig_dist.update_layout(
                         title="Risk Distribution",
-                        xaxis_title="Risk Tier", yaxis_title="Accounts",
-                        height=320, margin=dict(l=10, r=10, t=40, b=10),
+                        xaxis_title="Risk Tier",
+                        yaxis_title="Accounts",
+                        height=320,
+                        margin=dict(l=10, r=10, t=40, b=10),
                         paper_bgcolor="#FFFFFF",
                         plot_bgcolor="#FFFFFF",
                     )
@@ -852,23 +945,28 @@ elif active == "portfolio":
                     color_map = {"High": "#EF4444", "Medium": "#EAB308", "Low": "#22C55E"}
                     fig_scatter = go.Figure()
                     for tier_val, grp in portfolio_df.groupby("Risk Tier"):
-                        fig_scatter.add_trace(go.Scatter(
-                            x=grp["Risk Score"],
-                            y=grp["ARR ($)"],
-                            mode="markers",
-                            name=tier_val,
-                            marker=dict(
-                                color=color_map.get(str(tier_val), "#6B7280"),
-                                size=8, opacity=0.75,
-                                line=dict(width=0.5, color="white"),
-                            ),
-                            text=grp["Account"],
-                            hovertemplate="<b>%{text}</b><br>Risk: %{x:.0f}%<br>ARR: $%{y:,.0f}<extra></extra>",
-                        ))
+                        fig_scatter.add_trace(
+                            go.Scatter(
+                                x=grp["Risk Score"],
+                                y=grp["ARR ($)"],
+                                mode="markers",
+                                name=tier_val,
+                                marker=dict(
+                                    color=color_map.get(str(tier_val), "#6B7280"),
+                                    size=8,
+                                    opacity=0.75,
+                                    line=dict(width=0.5, color="white"),
+                                ),
+                                text=grp["Account"],
+                                hovertemplate="<b>%{text}</b><br>Risk: %{x:.0f}%<br>ARR: $%{y:,.0f}<extra></extra>",
+                            )
+                        )
                     fig_scatter.update_layout(
                         title="ARR vs Churn Risk Score",
-                        xaxis_title="Risk Score (%)", yaxis_title="ARR",
-                        height=320, margin=dict(l=10, r=10, t=40, b=10),
+                        xaxis_title="Risk Score (%)",
+                        yaxis_title="ARR",
+                        height=320,
+                        margin=dict(l=10, r=10, t=40, b=10),
                         paper_bgcolor="#FFFFFF",
                         plot_bgcolor="#FFFFFF",
                         legend=dict(orientation="h", y=-0.2),
@@ -877,17 +975,16 @@ elif active == "portfolio":
 
                 st.markdown("---")
 
-                #  Prioritised table 
+                #  Prioritised table
                 st.markdown("#### Prioritised account list")
                 display = portfolio_df.copy()
                 display["Risk Score"] = display["Risk Score"].map("{:.0f}%".format)
-                display["ARR"]    = display["ARR ($)"].map("${:,.0f}".format)
+                display["ARR"] = display["ARR ($)"].map("${:,.0f}".format)
 
                 styled = display.style.apply(_color_rows, axis=1)
-                st.dataframe(styled, use_container_width=True, height=400,
-                             hide_index=True)
+                st.dataframe(styled, use_container_width=True, height=400, hide_index=True)
 
-                #  Downloads 
+                #  Downloads
                 dl1, dl2 = st.columns(2)
                 with dl1:
                     st.download_button(
@@ -907,36 +1004,47 @@ elif active == "portfolio":
                         use_container_width=True,
                     )
 
-# 
+#
 # TAB 3 — Model Performance
-# 
+#
 
 elif active == "performance":
     st.markdown("### Model Performance and Evaluation")
 
-    #  Section 1: Headline metrics 
+    #  Section 1: Headline metrics
     mm1, mm2, mm3, mm4 = st.columns(4)
-    mm1.metric("ROC-AUC",  f"{METRICS['roc_auc']:.3f}",
-               help="How well the model ranks churners above non-churners. "
-                    "1.0 = perfect, 0.5 = random.")
-    mm2.metric("PR-AUC",   f"{METRICS['pr_auc']:.3f}",
-               help="Precision-recall AUC — more reliable than ROC-AUC "
-                    "for imbalanced data like churn.")
-    mm3.metric("Recall",   f"{METRICS['recall']:.3f}",
-               help="Of all customers who actually churned, what % did we catch?")
-    mm4.metric("Precision", f"{METRICS['precision']:.3f}",
-               help="Of all customers we flagged as at-risk, what % actually churned?")
+    mm1.metric(
+        "ROC-AUC",
+        f"{METRICS['roc_auc']:.3f}",
+        help="How well the model ranks churners above non-churners. "
+        "1.0 = perfect, 0.5 = random.",
+    )
+    mm2.metric(
+        "PR-AUC",
+        f"{METRICS['pr_auc']:.3f}",
+        help="Precision-recall AUC — more reliable than ROC-AUC " "for imbalanced data like churn.",
+    )
+    mm3.metric(
+        "Recall",
+        f"{METRICS['recall']:.3f}",
+        help="Of all customers who actually churned, what % did we catch?",
+    )
+    mm4.metric(
+        "Precision",
+        f"{METRICS['precision']:.3f}",
+        help="Of all customers we flagged as at-risk, what % actually churned?",
+    )
 
     st.markdown("---")
 
-    #  Section 2: 2×2 plot grid 
+    #  Section 2: 2×2 plot grid
     st.markdown("#### Evaluation plots")
     PLOTS = ROOT / "docs" / "plots"
     _PLOT_DESCRIPTIONS = {
         "confusion_matrix.png": (
             "Confusion Matrix (threshold = 0.50)",
             "Shows how many churners were correctly caught (true positives) vs missed "
-            "(false negatives) "
+            "(false negatives) ",
         ),
         "roc_curve.png": (
             "ROC Curve",
@@ -952,7 +1060,7 @@ elif active == "performance":
         ),
         "calibration_curve.png": (
             "Calibration Curve",
-            "Compares predicted probabilities to actual observed churn rates."
+            "Compares predicted probabilities to actual observed churn rates.",
         ),
     }
 
@@ -977,12 +1085,13 @@ elif active == "performance":
 
     st.markdown("---")
 
-    #  Section 3: SHAP feature importance 
+    #  Section 3: SHAP feature importance
     st.markdown("#### Top features driving predictions")
     shap_img = PLOTS / "shap_summary.png"
     if shap_img.exists():
         display_image(str(shap_img), 45)
-    st.markdown("""
+    st.markdown(
+        """
 **Reading this chart:** Each dot is one test-set account. The x-axis shows
 the SHAP value — how much that feature pushed the model toward (right) or
 away from (left) predicting churn. Colour indicates feature value: red = high,
@@ -999,13 +1108,15 @@ Top 5 drivers observed in this dataset:
    lower switching cost removes a key retention mechanism.
 5. **Days Since Last Login** — extended admin inactivity suggests the product
    has been abandoned in practice, even if the contract is live.
-""")
+"""
+    )
 
     st.markdown("---")
 
-    #  Section 4: Limitations 
+    #  Section 4: Limitations
     st.markdown("#### Known limitations")
-    st.markdown("""
+    st.markdown(
+        """
 **This model has important limitations you should understand before using it:**
 
 - **Synthetic training data.** Designed to mirror B2B SaaS patterns, but
@@ -1022,13 +1133,15 @@ Top 5 drivers observed in this dataset:
   differ. Verify P(churn) against observed rates before trusting the numbers.
 - **Augment, don't replace.** Model scores should inform CSM judgment, not
   automate account decisions.
-""")
+"""
+    )
 
     st.markdown("---")
 
-    #  Section 5: Why these metrics 
+    #  Section 5: Why these metrics
     st.markdown("#### Why these metrics?")
-    st.markdown("""
+    st.markdown(
+        """
 **Why PR-AUC instead of accuracy?**
 
 With ~20% churn rate, a model that predicts nobody churns achieves 80%
@@ -1048,7 +1161,7 @@ alarm (false positive) is one unnecessary CSM call: maybe an hour of time.
 At the default threshold of 0.50, the model catches ~69% of actual churners
 (recall) with ~42% precision which is roughly 3 false alarms for every 2 real
 churners surfaced. Raising the threshold to ~0.65
-brings precision and recall to ~54% each. 
+brings precision and recall to ~54% each.
 
 **Why ROC-AUC too?**
 
@@ -1056,9 +1169,10 @@ ROC-AUC is the universal benchmark stakeholders expect. At 0.80, this model
 is meaningfully better than chance and competitive with industry baselines for
 synthetic data. We report it alongside PR-AUC so you can compare to
 third-party benchmarks, while using PR-AUC for internal decision-making.
-""")
+"""
+    )
 
-#  Footer (all tabs) 
+#  Footer (all tabs)
 
 st.markdown("---")
 st.markdown(

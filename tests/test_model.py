@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 
-
 def _encode(customer_dict: dict, preprocessor):
     """Helper: transform a single customer dict through the fitted preprocessor."""
     features = list(preprocessor.feature_names_in_)
@@ -23,6 +22,7 @@ def _encode(customer_dict: dict, preprocessor):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_model_loads_successfully(loaded_model):
     # If the fixture resolves without error, the artifact exists and is valid.
@@ -43,12 +43,11 @@ def test_high_risk_customer_scores_higher_than_low_risk(
 ):
     """Critical sanity check: a clearly at-risk customer must outscore a healthy one."""
     X_high = _encode(high_risk_customer_dict, loaded_preprocessor)
-    X_low  = _encode(low_risk_customer_dict, loaded_preprocessor)
+    X_low = _encode(low_risk_customer_dict, loaded_preprocessor)
     score_high = float(loaded_model.predict_proba(X_high)[0, 1])
-    score_low  = float(loaded_model.predict_proba(X_low)[0, 1])
+    score_low = float(loaded_model.predict_proba(X_low)[0, 1])
     assert score_high > score_low, (
-        f"High-risk score ({score_high:.3f}) should exceed "
-        f"low-risk score ({score_low:.3f})"
+        f"High-risk score ({score_high:.3f}) should exceed " f"low-risk score ({score_low:.3f})"
     )
 
 

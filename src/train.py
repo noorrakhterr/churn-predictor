@@ -64,23 +64,23 @@ from sklearn.model_selection import (
 )
 from xgboost import XGBClassifier
 
-ROOT          = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = ROOT / "data" / "processed"
-MODELS_DIR    = ROOT / "models"
-PLOTS_DIR     = ROOT / "docs" / "plots"
+MODELS_DIR = ROOT / "models"
+PLOTS_DIR = ROOT / "docs" / "plots"
 
-RANDOM_STATE  = 42
-N_SPLITS      = 5   # folds for both baseline CV and hyperparameter search
+RANDOM_STATE = 42
+N_SPLITS = 5  # folds for both baseline CV and hyperparameter search
 N_ITER_SEARCH = 20  # RandomizedSearchCV draws
 
 # Scoring keys for cross_validate and RandomizedSearchCV.
 # 'average_precision' is sklearn's scorer name for PR-AUC.
 CV_SCORING = {
-    "roc_auc":   "roc_auc",
-    "pr_auc":    "average_precision",
-    "f1":        "f1",
+    "roc_auc": "roc_auc",
+    "pr_auc": "average_precision",
+    "f1": "f1",
     "precision": "precision",
-    "recall":    "recall",
+    "recall": "recall",
 }
 
 
@@ -88,17 +88,29 @@ CV_SCORING = {
 # Data loading
 # ---------------------------------------------------------------------------
 
+
 def load_processed_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Load the NumPy arrays written by src.preprocess."""
+    """
+    Load the NumPy arrays written by src.preprocess.
+
+    Returns:
+        (X_train, X_test, y_train, y_test) as NumPy arrays.
+    """
     X_train = np.load(PROCESSED_DIR / "X_train.npy")
-    X_test  = np.load(PROCESSED_DIR / "X_test.npy")
+    X_test = np.load(PROCESSED_DIR / "X_test.npy")
     y_train = np.load(PROCESSED_DIR / "y_train.npy")
-    y_test  = np.load(PROCESSED_DIR / "y_test.npy")
+    y_test = np.load(PROCESSED_DIR / "y_test.npy")
     return X_train, X_test, y_train, y_test
 
 
 def load_feature_names() -> list[str]:
-    """Return feature names saved by src.preprocess, or [] if absent."""
+    """
+    Return feature names saved by src.preprocess, or [] if absent.
+
+    Returns:
+        Ordered list of post-encoding feature name strings, matching the column
+        order of the processed NumPy arrays. Empty list if the file does not exist.
+    """
     path = MODELS_DIR / "feature_names.json"
     if path.exists():
         with open(path) as f:
@@ -109,6 +121,7 @@ def load_feature_names() -> list[str]:
 # ---------------------------------------------------------------------------
 # Model factory
 # ---------------------------------------------------------------------------
+
 
 def make_models(scale_pos_weight: float) -> dict:
     """
@@ -132,7 +145,7 @@ def make_models(scale_pos_weight: float) -> dict:
     return {
         "LogisticRegression": LogisticRegression(
             class_weight="balanced",
-            max_iter=1000,       # extra iterations to converge on 31 scaled features
+            max_iter=1000,  # extra iterations to converge on 31 scaled features
             random_state=RANDOM_STATE,
             solver="lbfgs",
         ),
@@ -153,6 +166,7 @@ def make_models(scale_pos_weight: float) -> dict:
 # ---------------------------------------------------------------------------
 # Cross-validation baseline
 # ---------------------------------------------------------------------------
+
 
 def cross_validate_models(
     models: dict,
@@ -190,17 +204,27 @@ def cross_validate_models(
         for metric in CV_SCORING:
             scores = raw[f"test_{metric}"]
             summary[f"{metric}_mean"] = float(scores.mean())
-            summary[f"{metric}_std"]  = float(scores.std())
+            summary[f"{metric}_std"] = float(scores.std())
         results[name] = summary
 
     return results
 
 
 def print_cv_table(cv_results: dict[str, dict[str, float]]) -> None:
-    """Print CV results as a fixed-width aligned table."""
+    """
+    Print CV results as a fixed-width aligned table.
+
+    Args:
+        cv_results: Mapping of model name to metric summary dict, as returned
+            by cross_validate_models(). Each inner dict contains keys of the
+            form '{metric}_mean' and '{metric}_std'.
+
+    Returns:
+        None. Output is written to stdout.
+    """
     metrics = ["roc_auc", "pr_auc", "f1", "precision", "recall"]
-    col_w   = 22
-    width   = 22 + col_w * len(metrics)
+    col_w = 22
+    width = 22 + col_w * len(metrics)
 
     print("\n" + "=" * width)
     print(f"{'5-Fold Stratified CV Results':^{width}}")
@@ -219,6 +243,7 @@ def print_cv_table(cv_results: dict[str, dict[str, float]]) -> None:
 # ---------------------------------------------------------------------------
 # Hyperparameter tuning
 # ---------------------------------------------------------------------------
+
 
 def tune_xgboost(
     X_train: np.ndarray,
@@ -252,10 +277,10 @@ def tune_xgboost(
         test evaluation without a separate fit() call.
     """
     param_dist = {
-        "n_estimators":  [100, 200, 400],
-        "max_depth":     [3, 5, 7],
+        "n_estimators": [100, 200, 400],
+        "max_depth": [3, 5, 7],
         "learning_rate": [0.01, 0.05, 0.1],
-        "subsample":     [0.8, 1.0],
+        "subsample": [0.8, 1.0],
     }
     base = XGBClassifier(
         scale_pos_weight=scale_pos_weight,
@@ -282,6 +307,7 @@ def tune_xgboost(
 # ---------------------------------------------------------------------------
 # Test-set evaluation
 # ---------------------------------------------------------------------------
+
 
 def evaluate_on_test(
     model,
@@ -322,14 +348,14 @@ def evaluate_on_test(
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
     y_proba = model.predict_proba(X_test)[:, 1]
-    y_pred  = (y_proba >= 0.5).astype(int)
+    y_pred = (y_proba >= 0.5).astype(int)
 
     metrics = {
-        "roc_auc":   float(roc_auc_score(y_test, y_proba)),
-        "pr_auc":    float(average_precision_score(y_test, y_proba)),
-        "f1":        float(f1_score(y_test, y_pred)),
+        "roc_auc": float(roc_auc_score(y_test, y_proba)),
+        "pr_auc": float(average_precision_score(y_test, y_proba)),
+        "f1": float(f1_score(y_test, y_pred)),
         "precision": float(precision_score(y_test, y_pred)),
-        "recall":    float(recall_score(y_test, y_pred)),
+        "recall": float(recall_score(y_test, y_pred)),
     }
 
     print("\n" + "=" * 60)
@@ -340,7 +366,8 @@ def evaluate_on_test(
     # --- Confusion matrix ---
     fig, ax = plt.subplots(figsize=(5, 4))
     ConfusionMatrixDisplay.from_predictions(
-        y_test, y_pred,
+        y_test,
+        y_pred,
         display_labels=["No Churn", "Churn"],
         colorbar=False,
         ax=ax,
@@ -365,11 +392,12 @@ def evaluate_on_test(
     # every account as churn achieves exactly this average precision value.
     no_skill = float(y_test.mean())
     fig, ax = plt.subplots(figsize=(6, 5))
-    PrecisionRecallDisplay.from_predictions(
-        y_test, y_proba, ax=ax, name="XGBoost (tuned)"
-    )
+    PrecisionRecallDisplay.from_predictions(y_test, y_proba, ax=ax, name="XGBoost (tuned)")
     ax.axhline(
-        no_skill, color="grey", linestyle="--", lw=0.8,
+        no_skill,
+        color="grey",
+        linestyle="--",
+        lw=0.8,
         label=f"No-skill baseline (precision = {no_skill:.2f})",
     )
     ax.set_title(f"Precision-Recall Curve  (PR-AUC = {metrics['pr_auc']:.4f})")
@@ -383,9 +411,7 @@ def evaluate_on_test(
     # fraction of true positives among samples in that predicted-probability bin.
     # Points on the diagonal = perfect calibration.
     fig, ax = plt.subplots(figsize=(6, 5))
-    CalibrationDisplay.from_predictions(
-        y_test, y_proba, n_bins=10, ax=ax, name="XGBoost (tuned)"
-    )
+    CalibrationDisplay.from_predictions(y_test, y_proba, n_bins=10, ax=ax, name="XGBoost (tuned)")
     ax.set_title("Calibration Curve (Reliability Diagram)")
     fig.tight_layout()
     fig.savefig(PLOTS_DIR / "calibration_curve.png", dpi=150)
@@ -398,6 +424,7 @@ def evaluate_on_test(
 # ---------------------------------------------------------------------------
 # Threshold optimisation
 # ---------------------------------------------------------------------------
+
 
 def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray) -> float:
     """
@@ -434,9 +461,8 @@ def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray) -> float:
     prec_arr, rec_arr, thresholds = precision_recall_curve(y_true, y_proba)
     # precision_recall_curve returns n+1 precision/recall values and n
     # thresholds.  Trim the trailing pair so arrays align element-wise.
-    f1_arr      = (2 * prec_arr[:-1] * rec_arr[:-1]
-                   / (prec_arr[:-1] + rec_arr[:-1] + 1e-9))
-    best_idx    = int(np.argmax(f1_arr))
+    f1_arr = 2 * prec_arr[:-1] * rec_arr[:-1] / (prec_arr[:-1] + rec_arr[:-1] + 1e-9)
+    best_idx = int(np.argmax(f1_arr))
     best_thresh = float(thresholds[best_idx])
 
     y_pred_default = (y_proba >= 0.50).astype(int)
@@ -448,18 +474,22 @@ def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray) -> float:
     print(f"{'Metric':<20}{'Default (0.50)':>17}{'Optimal':>18}")
     print("-" * 55)
     for label, dval, oval in [
-        ("Threshold",
-         f"{0.50:.4f}",
-         f"{best_thresh:.4f}"),
-        ("F1",
-         f"{f1_score(y_true, y_pred_default):.4f}",
-         f"{f1_score(y_true, y_pred_optimal):.4f}"),
-        ("Precision",
-         f"{precision_score(y_true, y_pred_default):.4f}",
-         f"{precision_score(y_true, y_pred_optimal):.4f}"),
-        ("Recall",
-         f"{recall_score(y_true, y_pred_default):.4f}",
-         f"{recall_score(y_true, y_pred_optimal):.4f}"),
+        ("Threshold", f"{0.50:.4f}", f"{best_thresh:.4f}"),
+        (
+            "F1",
+            f"{f1_score(y_true, y_pred_default):.4f}",
+            f"{f1_score(y_true, y_pred_optimal):.4f}",
+        ),
+        (
+            "Precision",
+            f"{precision_score(y_true, y_pred_default):.4f}",
+            f"{precision_score(y_true, y_pred_optimal):.4f}",
+        ),
+        (
+            "Recall",
+            f"{recall_score(y_true, y_pred_default):.4f}",
+            f"{recall_score(y_true, y_pred_optimal):.4f}",
+        ),
     ]:
         print(f"  {label:<18}{dval:>17}{oval:>18}")
     print("=" * 55)
@@ -471,8 +501,19 @@ def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray) -> float:
 # Summary table
 # ---------------------------------------------------------------------------
 
+
 def print_metrics_table(metrics: dict[str, float]) -> None:
-    """Print final test-set metrics in a clean aligned table."""
+    """
+    Print final test-set metrics in a clean aligned table.
+
+    Args:
+        metrics: Dict of metric name to float value, as returned by
+            evaluate_on_test(). Expected keys: roc_auc, pr_auc, f1,
+            precision, recall.
+
+    Returns:
+        None. Output is written to stdout.
+    """
     print("\n" + "=" * 40)
     print(f"{'Final Test-Set Metrics':^40}")
     print("=" * 40)
@@ -484,6 +525,7 @@ def print_metrics_table(metrics: dict[str, float]) -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Orchestrate the full training, tuning, and evaluation pipeline."""
@@ -502,15 +544,17 @@ def main() -> None:
     n_pos = int((y_train == 1).sum())
     scale_pos_weight = n_neg / n_pos
 
-    print(f"  Train : {X_train.shape[0]:>5} samples  "
-          f"({n_pos} churn / {n_neg} no-churn,  "
-          f"scale_pos_weight = {scale_pos_weight:.2f})")
+    print(
+        f"  Train : {X_train.shape[0]:>5} samples  "
+        f"({n_pos} churn / {n_neg} no-churn,  "
+        f"scale_pos_weight = {scale_pos_weight:.2f})"
+    )
     print(f"  Test  : {X_test.shape[0]:>5} samples")
     print(f"  Feats : {X_train.shape[1]}")
 
     # ---- 2. Baseline CV on all three models ---------------------------------
     print("\n[2/4] Baseline cross-validation (5-fold StratifiedKFold)...")
-    models   = make_models(scale_pos_weight)
+    models = make_models(scale_pos_weight)
     cv_stats = cross_validate_models(models, X_train, y_train)
     print_cv_table(cv_stats)
 
@@ -523,7 +567,7 @@ def main() -> None:
     test_metrics = evaluate_on_test(best_model, X_test, y_test)
 
     # ---- 5. Threshold optimisation (reported here, after test eval) ---------
-    y_proba           = best_model.predict_proba(X_test)[:, 1]
+    y_proba = best_model.predict_proba(X_test)[:, 1]
     optimal_threshold = find_optimal_threshold(y_test, y_proba)
 
     print_metrics_table(test_metrics)

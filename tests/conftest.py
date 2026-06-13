@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 # Values match the presets used in app.py so they're realistic and tested end-to-end.
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def sample_customer_dict() -> dict:
     """Medium-risk baseline customer — sits in the ambiguous middle."""
@@ -105,6 +106,7 @@ def low_risk_customer_dict() -> dict:
 # ---------------------------------------------------------------------------
 # Artifact fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def loaded_model():

@@ -102,6 +102,7 @@ def test_numeric_imputation_fills_nulls():
 # New required tests
 # ---------------------------------------------------------------------------
 
+
 def test_load_data_returns_correct_shapes():
     X, y = load_data(RAW_DATA_PATH)
     assert len(X) == len(y), "X and y must have the same number of rows"
@@ -127,10 +128,10 @@ def test_split_data_is_stratified():
     X, y = load_data(RAW_DATA_PATH)
     X_train, X_test, y_train, y_test = split_data(X, y)
     train_rate = y_train.mean()
-    test_rate  = y_test.mean()
-    assert abs(train_rate - test_rate) < 0.02, (
-        f"Churn rates diverged: train={train_rate:.4f}, test={test_rate:.4f}"
-    )
+    test_rate = y_test.mean()
+    assert (
+        abs(train_rate - test_rate) < 0.02
+    ), f"Churn rates diverged: train={train_rate:.4f}, test={test_rate:.4f}"
 
 
 def test_preprocessor_handles_missing_values():

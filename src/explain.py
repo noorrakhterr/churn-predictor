@@ -34,10 +34,10 @@ import numpy as np
 import pandas as pd
 import shap
 
-ROOT          = Path(__file__).resolve().parent.parent
-MODELS_DIR    = ROOT / "models"
+ROOT = Path(__file__).resolve().parent.parent
+MODELS_DIR = ROOT / "models"
 PROCESSED_DIR = ROOT / "data" / "processed"
-PLOTS_DIR     = ROOT / "docs" / "plots"
+PLOTS_DIR = ROOT / "docs" / "plots"
 RAW_DATA_PATH = ROOT / "data" / "raw" / "saas_churn.csv"
 
 # Categorical columns that were one-hot encoded by the preprocessor.
@@ -47,28 +47,28 @@ CATEGORICAL_COLS = ["industry", "contract_type"]
 # Human-readable display labels for raw column names.
 # Exported so app.py can render clean names without re-importing this map.
 FEATURE_LABELS: dict[str, str] = {
-    "company_size":                    "Company size (employees)",
-    "acv_usd":                         "Annual contract value ($)",
-    "tenure_months":                   "Tenure (months)",
-    "seats_purchased":                 "Seats purchased",
-    "seats_active_last_30d":           "Active seats (30d)",
-    "seat_utilization_rate":           "Seat utilization rate",
-    "logins_last_30d":                 "Logins (30d)",
-    "admin_logins_last_30d":           "Admin logins (30d)",
-    "features_adopted":                "Features adopted",
-    "mfa_enabled_pct":                 "MFA enabled (%)",
-    "api_calls_last_30d":              "API calls (30d)",
-    "support_tickets_last_90d":        "Support tickets (90d)",
-    "critical_tickets_last_90d":       "Critical tickets (90d)",
-    "nps_score":                       "NPS score",
-    "qbr_attendance_rate":             "QBR attendance rate",
-    "exec_sponsor_changed_last_180d":  "Exec sponsor changed (180d)",
-    "days_since_last_login":           "Days since last login",
-    "discount_pct":                    "Discount (%)",
-    "payment_delays_last_year":        "Payment delays (last year)",
+    "company_size": "Company size (employees)",
+    "acv_usd": "Annual contract value ($)",
+    "tenure_months": "Tenure (months)",
+    "seats_purchased": "Seats purchased",
+    "seats_active_last_30d": "Active seats (30d)",
+    "seat_utilization_rate": "Seat utilization rate",
+    "logins_last_30d": "Logins (30d)",
+    "admin_logins_last_30d": "Admin logins (30d)",
+    "features_adopted": "Features adopted",
+    "mfa_enabled_pct": "MFA enabled (%)",
+    "api_calls_last_30d": "API calls (30d)",
+    "support_tickets_last_90d": "Support tickets (90d)",
+    "critical_tickets_last_90d": "Critical tickets (90d)",
+    "nps_score": "NPS score",
+    "qbr_attendance_rate": "QBR attendance rate",
+    "exec_sponsor_changed_last_180d": "Exec sponsor changed (180d)",
+    "days_since_last_login": "Days since last login",
+    "discount_pct": "Discount (%)",
+    "payment_delays_last_year": "Payment delays (last year)",
     "expansion_revenue_last_year_usd": "Expansion revenue (last year, $)",
-    "industry":                        "Industry",
-    "contract_type":                   "Contract type",
+    "industry": "Industry",
+    "contract_type": "Contract type",
 }
 
 # ---------------------------------------------------------------------------
@@ -115,9 +115,7 @@ _RECOMMENDATION_RULES: list[dict] = [
     {
         "feature": "critical_tickets_last_90d",
         "condition": lambda v: int(v) >= 2,
-        "action": (
-            "Coordinate with Support for an escalation review."
-        ),
+        "action": ("Coordinate with Support for an escalation review."),
         "internal": "Internal: loop in Support lead; confirm all critical tickets are resolved.",
     },
     {
@@ -161,9 +159,9 @@ _FALLBACK_RECOMMENDATION = {
 # Lazy-loaded module-level singletons
 # (avoids repeated disk I/O when this module is imported by the Streamlit app)
 # ---------------------------------------------------------------------------
-_model        = None
+_model = None
 _preprocessor = None
-_explainer    = None
+_explainer = None
 _feature_names: list[str] = []
 
 
@@ -196,6 +194,7 @@ def _load_artifacts() -> None:
 # ---------------------------------------------------------------------------
 # Backward-compatible artifact loader (used by app.py)
 # ---------------------------------------------------------------------------
+
 
 def load_artifact(
     model_path: Path = MODELS_DIR / "churn_model.pkl",
@@ -235,8 +234,8 @@ def load_artifact(
                 feature_cols = json.load(f)
 
         artifact = {
-            "model":        raw,
-            "threshold":    threshold,
+            "model": raw,
+            "threshold": threshold,
             "feature_cols": feature_cols,
         }
 
@@ -248,15 +247,26 @@ def load_artifact(
 # Backward-compatible account scoring (used by app.py)
 # ---------------------------------------------------------------------------
 
+
 def score_accounts(df: pd.DataFrame, artifact: dict) -> pd.DataFrame:
     """
     Score every row in df and return it sorted by descending churn probability.
 
     Appends churn_probability and churn_flag columns; all other columns are
     preserved so the Streamlit app can display company_name, account_id, etc.
+
+    Args:
+        df: DataFrame with raw feature columns matching the preprocessor's
+            expected input schema (preprocessor.feature_names_in_).
+        artifact: Dict returned by load_artifact(), with keys: model,
+            threshold, feature_cols, preprocessor.
+
+    Returns:
+        Copy of df with two new columns appended — churn_probability (float)
+        and churn_flag (int 0/1) — sorted by churn_probability descending.
     """
-    model        = artifact["model"]
-    threshold    = artifact["threshold"]
+    model = artifact["model"]
+    threshold = artifact["threshold"]
     preprocessor = artifact["preprocessor"]
 
     X = preprocessor.transform(df[list(preprocessor.feature_names_in_)])
@@ -264,13 +274,14 @@ def score_accounts(df: pd.DataFrame, artifact: dict) -> pd.DataFrame:
 
     result = df.copy()
     result["churn_probability"] = probs
-    result["churn_flag"]        = (probs >= threshold).astype(int)
+    result["churn_flag"] = (probs >= threshold).astype(int)
     return result.sort_values("churn_probability", ascending=False)
 
 
 # ---------------------------------------------------------------------------
 # Feature name utilities (shared by global plots and local explanations)
 # ---------------------------------------------------------------------------
+
 
 def _parse_feat(feat: str) -> tuple[str, str | None]:
     """
@@ -287,7 +298,7 @@ def _parse_feat(feat: str) -> tuple[str, str | None]:
         rest = feat[5:]
         for col in CATEGORICAL_COLS:
             if rest.startswith(col + "_"):
-                return col, rest[len(col) + 1:]
+                return col, rest[len(col) + 1 :]
         return rest, None
     return feat, None
 
@@ -314,15 +325,15 @@ def _clean_names(feats: list[str]) -> list[str]:
 # Covers abbreviated or domain-specific names that title-casing alone
 # would render poorly (e.g. "Nps Score", "Qbr Attendance Rate").
 _DISPLAY_NAMES: dict[str, str] = {
-    "seat_utilization_rate":           "Seat Utilization",
-    "exec_sponsor_changed_last_180d":  "Exec Sponsor Change",
-    "days_since_last_login":           "Days Since Last Login",
-    "critical_tickets_last_90d":       "Critical Support Tickets",
-    "qbr_attendance_rate":             "QBR Attendance Rate",
-    "nps_score":                       "NPS Score",
-    "contract_type":                   "Contract Type",
-    "tenure_months":                   "Customer Tenure",
-    "payment_delays_last_year":        "Payment Delays",
+    "seat_utilization_rate": "Seat Utilization",
+    "exec_sponsor_changed_last_180d": "Exec Sponsor Change",
+    "days_since_last_login": "Days Since Last Login",
+    "critical_tickets_last_90d": "Critical Support Tickets",
+    "qbr_attendance_rate": "QBR Attendance Rate",
+    "nps_score": "NPS Score",
+    "contract_type": "Contract Type",
+    "tenure_months": "Customer Tenure",
+    "payment_delays_last_year": "Payment Delays",
     "expansion_revenue_last_year_usd": "Expansion Revenue",
 }
 
@@ -356,6 +367,7 @@ def clean_feature_name(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Global SHAP plots
 # ---------------------------------------------------------------------------
+
 
 def generate_global_plots(
     X_test: np.ndarray,
@@ -403,9 +415,7 @@ def generate_global_plots(
 
     # --- Bar chart of mean |SHAP| ---
     plt.figure()
-    shap.summary_plot(
-        sv, X_test, feature_names=clean, plot_type="bar", show=False, max_display=20
-    )
+    shap.summary_plot(sv, X_test, feature_names=clean, plot_type="bar", show=False, max_display=20)
     plt.title("Mean |SHAP| Feature Importance")
     plt.tight_layout()
     plt.savefig(PLOTS_DIR / "shap_importance.png", dpi=150, bbox_inches="tight")
@@ -417,6 +427,7 @@ def generate_global_plots(
 # ---------------------------------------------------------------------------
 # Local explanation — backward-compatible (used by app.py)
 # ---------------------------------------------------------------------------
+
 
 def explain_account(
     row: pd.Series,
@@ -430,19 +441,30 @@ def explain_account(
                 "shap_value": float}
 
     Compatible with the existing Streamlit app call signature.
-    """
-    model        = artifact["model"]
-    preprocessor = artifact["preprocessor"]
-    features     = list(preprocessor.feature_names_in_)
-    feat_names   = list(preprocessor.get_feature_names_out())
 
-    X_raw   = pd.DataFrame([row[features]])
-    X_enc   = preprocessor.transform(X_raw)
+    Args:
+        row: A single account row as a pandas Series. Must contain all columns
+            listed in preprocessor.feature_names_in_.
+        artifact: Dict returned by load_artifact(), with keys: model,
+            preprocessor (and optionally feature_cols, threshold).
+        top_n: Number of top SHAP drivers to return, ranked by |SHAP| descending.
+
+    Returns:
+        List of up to top_n dicts, each with keys: feature (human-readable
+        label), direction ('increases' or 'decreases'), shap_value (float).
+    """
+    model = artifact["model"]
+    preprocessor = artifact["preprocessor"]
+    features = list(preprocessor.feature_names_in_)
+    feat_names = list(preprocessor.get_feature_names_out())
+
+    X_raw = pd.DataFrame([row[features]])
+    X_enc = preprocessor.transform(X_raw)
     if hasattr(X_enc, "toarray"):
         X_enc = X_enc.toarray()
 
-    explainer  = shap.TreeExplainer(model)
-    sv         = explainer.shap_values(X_enc)
+    explainer = shap.TreeExplainer(model)
+    sv = explainer.shap_values(X_enc)
     if isinstance(sv, list):
         sv = sv[1]
     vals = sv[0]
@@ -450,8 +472,8 @@ def explain_account(
     drivers = sorted(zip(feat_names, vals), key=lambda x: abs(x[1]), reverse=True)[:top_n]
     return [
         {
-            "feature":    _clean_name(feat),
-            "direction":  "increases" if val > 0 else "decreases",
+            "feature": _clean_name(feat),
+            "direction": "increases" if val > 0 else "decreases",
             "shap_value": round(float(val), 4),
         }
         for feat, val in drivers
@@ -541,8 +563,8 @@ def explain_prediction(customer_dict: dict) -> dict:
 
     # Build a single-row DataFrame with the columns the preprocessor expects.
     features = list(_preprocessor.feature_names_in_)
-    X_raw    = pd.DataFrame([{col: customer_dict.get(col) for col in features}])
-    X_enc    = _preprocessor.transform(X_raw)
+    X_raw = pd.DataFrame([{col: customer_dict.get(col) for col in features}])
+    X_enc = _preprocessor.transform(X_raw)
     if hasattr(X_enc, "toarray"):
         X_enc = X_enc.toarray()
 
@@ -559,31 +581,30 @@ def explain_prediction(customer_dict: dict) -> dict:
     sv = _explainer.shap_values(X_enc)
     if isinstance(sv, list):
         sv = sv[1]
-    shap_vals = sv[0]   # shape (n_features,)
+    shap_vals = sv[0]  # shape (n_features,)
 
     # --- Build per-feature factor dicts ---
     # For categoricals we deduplicate by base column, keeping the entry with
     # the largest |SHAP|.  This prevents "Contract type = Monthly" and
     # "Contract type = Annual" both appearing for the same account.
     seen_base_cols: dict[str, tuple[int, float]] = {}  # col → (idx, |shap|)
-    ordered_indices = np.argsort(shap_vals)[::-1]       # high→low
+    ordered_indices = np.argsort(shap_vals)[::-1]  # high→low
 
     def _make_factor(feat: str, shap_val: float) -> dict:
         col, cat_val = _parse_feat(feat)
         if cat_val is not None:
-            raw_val = customer_dict.get(col)   # e.g. "Monthly" from the raw dict
+            raw_val = customer_dict.get(col)  # e.g. "Monthly" from the raw dict
         else:
             raw_val = customer_dict.get(col)
         return {
-            "feature":    clean_feature_name(col),
-            "value":      raw_val,
+            "feature": clean_feature_name(col),
+            "value": raw_val,
             "shap_value": round(float(shap_val), 4),
-            "impact":     interpret_shap_value(shap_val),
+            "impact": interpret_shap_value(shap_val),
         }
 
     all_factors = [
-        _make_factor(_feature_names[i], shap_vals[i])
-        for i in range(len(_feature_names))
+        _make_factor(_feature_names[i], shap_vals[i]) for i in range(len(_feature_names))
     ]
 
     # Deduplicate categorical base columns: keep max-|SHAP| entry per col.
@@ -595,18 +616,18 @@ def explain_prediction(customer_dict: dict) -> dict:
             seen[col] = abs(f["shap_value"])
             deduped.append(f)
 
-    top_risk        = [f for f in deduped if f["shap_value"] > 0][:5]
-    top_protective  = [f for f in reversed(deduped) if f["shap_value"] < 0][:3]
+    top_risk = [f for f in deduped if f["shap_value"] > 0][:5]
+    top_protective = [f for f in reversed(deduped) if f["shap_value"] < 0][:3]
     # reversed(deduped) gives ascending shap order → most negative first
-    top_protective  = sorted(
+    top_protective = sorted(
         [f for f in deduped if f["shap_value"] < 0],
         key=lambda x: x["shap_value"],
     )[:3]
 
     return {
-        "churn_probability":    round(prob, 4),
-        "risk_tier":            tier,
-        "top_risk_factors":     top_risk,
+        "churn_probability": round(prob, 4),
+        "risk_tier": tier,
+        "top_risk_factors": top_risk,
         "top_protective_factors": top_protective,
     }
 
@@ -614,6 +635,7 @@ def explain_prediction(customer_dict: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Recommendation engine
 # ---------------------------------------------------------------------------
+
 
 def make_recommendation(top_risk_factors: list[dict]) -> list[dict]:
     """
@@ -637,7 +659,14 @@ def make_recommendation(top_risk_factors: list[dict]) -> list[dict]:
     matched_rules: set[str] = set()
 
     for factor in top_risk_factors:
-        feat  = factor.get("feature", "")
+        # NOTE: explain_prediction() sets factor["feature"] to the clean display
+        # name from clean_feature_name() (e.g. "Seat Utilization"), while rule
+        # keys in _RECOMMENDATION_RULES are raw column names (e.g.
+        # "seat_utilization_rate").  The comparison `feat != rule_key` therefore
+        # only fires when factors are built with the raw column name directly —
+        # as in any caller that skips explain_prediction() and constructs factor
+        # dicts manually with raw keys.
+        feat = factor.get("feature", "")
         value = factor.get("value")
         if value is None:
             continue
@@ -649,9 +678,7 @@ def make_recommendation(top_risk_factors: list[dict]) -> list[dict]:
                 continue
             try:
                 if rule["condition"](value):
-                    recommendations.append(
-                        {"action": rule["action"], "internal": rule["internal"]}
-                    )
+                    recommendations.append({"action": rule["action"], "internal": rule["internal"]})
                     matched_rules.add(rule_key)
             except (TypeError, ValueError):
                 continue
@@ -666,6 +693,7 @@ def make_recommendation(top_risk_factors: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 # CSM notes formatter
 # ---------------------------------------------------------------------------
+
 
 def format_for_csm(
     explanation: dict,
@@ -702,10 +730,10 @@ def format_for_csm(
              Internal: flag for CS Ops...
           2. Identify the new exec sponsor...
     """
-    prob        = explanation["churn_probability"]
-    tier        = explanation["risk_tier"]
-    risk_facs   = explanation.get("top_risk_factors", [])
-    prot_facs   = explanation.get("top_protective_factors", [])
+    prob = explanation["churn_probability"]
+    tier = explanation["risk_tier"]
+    risk_facs = explanation.get("top_risk_factors", [])
+    prot_facs = explanation.get("top_protective_factors", [])
 
     lines = [
         f"Account: {account_name}",
@@ -753,6 +781,7 @@ def format_for_csm(
 # ---------------------------------------------------------------------------
 # Entry point — generate global plots and demo 3 sample customers
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """
@@ -858,7 +887,7 @@ def main() -> None:
     print("=" * 65)
 
     for label, cust in samples.items():
-        exp   = explain_prediction(cust)
+        exp = explain_prediction(cust)
         notes = format_for_csm(exp, account_name=f"Sample ({label})")
         print(f"\n{'─' * 65}")
         print(notes)

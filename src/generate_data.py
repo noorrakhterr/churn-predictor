@@ -94,13 +94,27 @@ def _calibrate_intercept(logits: np.ndarray, target_rate: float) -> float:
 
 
 def generate(n: int = N_RECORDS) -> pd.DataFrame:
+    """
+    Synthesize a B2B SaaS churn dataset of n accounts.
+
+    Follows the four-step process described in the module docstring:
+    1. Draw firmographics from realistic skewed distributions.
+    2. Generate product-usage and engagement signals driven by a latent health factor.
+    3. Compute the churn label via a logistic model over the observed features.
+    4. Calibrate the intercept by bisection to hit TARGET_CHURN_RATE.
+
+    Args:
+        n: Number of synthetic accounts to generate.
+
+    Returns:
+        DataFrame with one row per account and all columns documented in the
+        module docstring, including the binary 'churned' label as the last column.
+    """
     # --- Latent, unobserved account health: the spine of all correlations. ---
     health = rng.normal(0.0, 1.0, n)
 
     # --- Firmographics ----------------------------------------------------
-    company_size = np.clip(
-        np.exp(rng.normal(6.5, 1.1, n)).round(), 50, 50_000
-    ).astype(int)
+    company_size = np.clip(np.exp(rng.normal(6.5, 1.1, n)).round(), 50, 50_000).astype(int)
     log_size = np.log10(company_size)
 
     industry = rng.choice(INDUSTRIES, size=n, p=INDUSTRY_WEIGHTS)
@@ -135,9 +149,7 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
     logins_last_30d = (seats_active_last_30d * per_seat_logins).round().astype(int)
     admin_logins_last_30d = rng.binomial(logins_last_30d, 0.06)
 
-    features_adopted = np.clip(
-        (6 + 3 * health + rng.normal(0, 1.5, n)).round(), 0, 12
-    ).astype(int)
+    features_adopted = np.clip((6 + 3 * health + rng.normal(0, 1.5, n)).round(), 0, 12).astype(int)
 
     # MFA adoption (Okta-flavored): higher for larger, more security-mature,
     # healthier orgs.
@@ -147,8 +159,8 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
 
     # API usage: heavy-tailed, scales with active seats and health.
     api_calls_last_30d = (
-        seats_active_last_30d * np.exp(rng.normal(2.0 + 0.5 * health, 1.0, n))
-    ).round().astype(int)
+        (seats_active_last_30d * np.exp(rng.normal(2.0 + 0.5 * health, 1.0, n))).round().astype(int)
+    )
 
     # --- Engagement / health ---------------------------------------------
     # Unhealthy + larger accounts file more tickets.
@@ -175,16 +187,12 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
     # Days since last login: low for healthy/active accounts; if a customer had
     # zero logins in 30 days, force a longer gap.
     days_scale = np.clip(10 - 5 * health, 1.0, None)
-    days_since_last_login = np.clip(
-        rng.exponential(days_scale).round(), 0, 90
-    ).astype(int)
+    days_since_last_login = np.clip(rng.exponential(days_scale).round(), 0, 90).astype(int)
     no_logins = logins_last_30d == 0
     days_since_last_login[no_logins] = rng.integers(20, 91, size=no_logins.sum())
 
     # --- Commercial -------------------------------------------------------
-    discount_pct = np.clip(
-        rng.normal(8 + 5 * (np.log10(acv_usd) - 4), 6, n), 0, 45
-    ).round(1)
+    discount_pct = np.clip(rng.normal(8 + 5 * (np.log10(acv_usd) - 4), 6, n), 0, 45).round(1)
     payment_delays_last_year = np.clip(
         rng.poisson(np.clip(0.4 + 0.6 * (-health), 0.05, None)), 0, 12
     )
@@ -207,9 +215,7 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
     delays_term = np.minimum(payment_delays_last_year, 5) / 5.0
     # Interaction: brand-new accounts on month-to-month terms are the classic
     # honeymoon-churn risk — the combination is riskier than either signal alone.
-    monthly_short_tenure_term = (
-        (contract_type == "Monthly") & (tenure_months < 6)
-    ).astype(float)
+    monthly_short_tenure_term = ((contract_type == "Monthly") & (tenure_months < 6)).astype(float)
 
     logit = (
         1.6 * util_term
@@ -272,6 +278,19 @@ def generate(n: int = N_RECORDS) -> pd.DataFrame:
 
 
 def print_summary(df: pd.DataFrame) -> None:
+    """
+    Print a validation report for the generated dataset to stdout.
+
+    Covers: overall churn rate, missing-value counts, Pearson correlations of
+    key drivers with the churn label, and sanity-check segment churn rates for
+    exec sponsor change, contract type, seat utilization, tenure, and NPS.
+
+    Args:
+        df: DataFrame returned by generate().
+
+    Returns:
+        None. All output is written to stdout.
+    """
     n = len(df)
     churn_rate = df["churned"].mean()
 
@@ -291,9 +310,7 @@ def print_summary(df: pd.DataFrame) -> None:
 
     # ---- Correlations of key drivers with churn --------------------------
     tmp = df.copy()
-    tmp["exec_sponsor_changed_last_180d"] = tmp[
-        "exec_sponsor_changed_last_180d"
-    ].astype(int)
+    tmp["exec_sponsor_changed_last_180d"] = tmp["exec_sponsor_changed_last_180d"].astype(int)
     tmp["monthly_contract"] = (tmp["contract_type"] == "Monthly").astype(int)
 
     key_features = [
@@ -326,8 +343,7 @@ def print_summary(df: pd.DataFrame) -> None:
     exec_no = df.loc[~df["exec_sponsor_changed_last_180d"], "churned"].mean()
     ratio = exec_yes / exec_no if exec_no else float("nan")
     print(
-        f"  exec sponsor changed:  {exec_yes:.1%} vs {exec_no:.1%} "
-        f"(no change)  -> {ratio:.1f}x"
+        f"  exec sponsor changed:  {exec_yes:.1%} vs {exec_no:.1%} " f"(no change)  -> {ratio:.1f}x"
     )
 
     for ctype in CONTRACT_TYPES:

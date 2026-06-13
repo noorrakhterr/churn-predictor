@@ -14,18 +14,19 @@ from explain import _load_artifacts, explain_prediction, make_recommendation
 _load_artifacts()
 
 _EXPECTED_KEYS = {"churn_probability", "risk_tier", "top_risk_factors", "top_protective_factors"}
-_VALID_TIERS   = {"Low", "Medium", "High"}
+_VALID_TIERS = {"Low", "Medium", "High"}
 
 
 # ---------------------------------------------------------------------------
 # explain_prediction
 # ---------------------------------------------------------------------------
 
+
 def test_explain_prediction_returns_correct_shape(sample_customer_dict):
     result = explain_prediction(sample_customer_dict)
-    assert _EXPECTED_KEYS == set(result.keys()), (
-        f"Missing keys: {_EXPECTED_KEYS - set(result.keys())}"
-    )
+    assert _EXPECTED_KEYS == set(
+        result.keys()
+    ), f"Missing keys: {_EXPECTED_KEYS - set(result.keys())}"
     assert result["risk_tier"] in _VALID_TIERS
     assert 0.0 <= result["churn_probability"] <= 1.0
     # Each factor must have the four documented fields
@@ -40,14 +41,15 @@ def test_top_risk_factors_are_sorted_by_magnitude(high_risk_customer_dict):
         pytest.skip("Not enough risk factors to test ordering")
     shap_values = [f["shap_value"] for f in factors]
     # Risk factors are positive SHAP — larger values should come first
-    assert shap_values == sorted(shap_values, reverse=True), (
-        "top_risk_factors should be sorted by descending shap_value"
-    )
+    assert shap_values == sorted(
+        shap_values, reverse=True
+    ), "top_risk_factors should be sorted by descending shap_value"
 
 
 # ---------------------------------------------------------------------------
 # make_recommendation
 # ---------------------------------------------------------------------------
+
 
 def test_make_recommendation_returns_at_least_one_action(high_risk_customer_dict):
     explanation = explain_prediction(high_risk_customer_dict)
@@ -63,10 +65,10 @@ def test_make_recommendation_handles_unknown_factor():
     """A factor with no matching rule should trigger the fallback recommendation."""
     unknown_factors = [
         {
-            "feature":    "completely_unknown_feature_xyz",
-            "value":      42,
+            "feature": "completely_unknown_feature_xyz",
+            "value": 42,
             "shap_value": 0.5,
-            "impact":     "Strongly increases churn risk",
+            "impact": "Strongly increases churn risk",
         }
     ]
     recs = make_recommendation(unknown_factors)

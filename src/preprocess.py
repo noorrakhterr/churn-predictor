@@ -126,9 +126,7 @@ def identify_column_types(X: pd.DataFrame) -> tuple[list[str], list[str]]:
         (numeric_cols, categorical_cols) as lists of column names.
     """
     numeric_cols = X.select_dtypes(include=["number"]).columns.tolist()
-    categorical_cols = X.select_dtypes(
-        include=["object", "bool", "category"]
-    ).columns.tolist()
+    categorical_cols = X.select_dtypes(include=["object", "bool", "category"]).columns.tolist()
     return numeric_cols, categorical_cols
 
 
@@ -138,6 +136,14 @@ def get_features_and_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     the target from a raw DataFrame. A lightweight convenience wrapper for
     callers/tests that already hold a DataFrame; the full load-from-disk path is
     load_data(). Encoding still happens via the preprocessor, not here.
+
+    Args:
+        df: Raw churn DataFrame that includes all canonical feature columns and
+            the TARGET_COL ('churned') column.
+
+    Returns:
+        (X, y) where X contains only the canonical feature columns and y is the
+        'churned' Series.
     """
     X = df[NUMERIC_COLS + CATEGORICAL_COLS]
     y = df[TARGET_COL]
@@ -326,15 +332,18 @@ def main() -> None:
     # 7. Report. Train/test churn rates should be nearly identical — that
     #    near-equality is the visible proof that stratification worked.
     print("Preprocessing complete.")
-    print(f"  Raw features:          {X.shape[1]} cols "
-          f"({len(numeric_cols)} numeric, {len(categorical_cols)} categorical)")
-    print(f"  Processed feature dim: {X_train_processed.shape[1]} "
-          f"(after one-hot encoding)")
+    print(
+        f"  Raw features:          {X.shape[1]} cols "
+        f"({len(numeric_cols)} numeric, {len(categorical_cols)} categorical)"
+    )
+    print(f"  Processed feature dim: {X_train_processed.shape[1]} " f"(after one-hot encoding)")
     print(f"  X_train shape:         {X_train_processed.shape}")
     print(f"  X_test shape:          {X_test_processed.shape}")
     print(f"  Churn rate (train):    {y_train.mean():.4f}")
-    print(f"  Churn rate (test):     {y_test.mean():.4f}  "
-          f"(Δ={abs(y_train.mean() - y_test.mean()):.4f} — proof of stratification)")
+    print(
+        f"  Churn rate (test):     {y_test.mean():.4f}  "
+        f"(Δ={abs(y_train.mean() - y_test.mean()):.4f} — proof of stratification)"
+    )
     print(f"  Artifacts saved to:    {MODELS_DIR}/ and {PROCESSED_DIR}/")
 
 
