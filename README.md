@@ -2,52 +2,50 @@
 
 > AI-powered account prioritization for B2B SaaS Customer Success teams
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?style=flat&logo=streamlit)](https://churnburn.streamlit.app)
-[![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4-F7931E?style=flat&logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
-[![XGBoost](https://img.shields.io/badge/XGBoost-2.0-189AB4?style=flat)](https://xgboost.readthedocs.io)
-[![SHAP](https://img.shields.io/badge/SHAP-0.45-6236FF?style=flat)](https://shap.readthedocs.io)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.35-FF4B4B?style=flat&logo=streamlit)](https://streamlit.io)
-
 **[Live Demo](https://churnburn.streamlit.app)** · [Project Brief](docs/product-brief.md) · [Model Card](docs/model-card.md)
 
 ---
 
 ## The Problem
 
-Acquiring a B2B customer costs 5–25× more than retaining one (Bain & Company). Yet most CS teams still manage renewals reactively — a CSM only finds out an account is at risk when the customer goes quiet, stops attending QBRs, or submits a cancellation notice. I built this project after three years as a CSM at Okta, watching colleagues burn cycles on healthy accounts while genuinely at-risk ones slipped through. The signal was always there in the data — seat utilization trends, login gaps, support ticket spikes — but there was no systematic way to surface it.
+The greatest constrain for B2B companies is retaining customers, a responsibility
+that falls largely onto a Customer Success Manager. Churned customers are difficult
+to spot early and present a large risk when they're already too far gone. After
+nearly a year at Okta, I've watched customers slip through CSM's fingers due to a
+lack of signaling on customer data such as seat utilization, login gaps, and support
+tickets. 
 
 ---
 
-## What This Is
+## The Solution: ChurnBurn
 
-A tool that scores every account's churn risk using machine learning, explains *why* it's at risk using SHAP feature attribution, and maps those drivers to specific CSM actions — not generic advice, but plays grounded in how B2B SaaS accounts actually churn. Built for CSMs who care about which three accounts to call this week, not data scientists who want to tune hyperparameters.
+ChurnBurn is a tool that scores an account's churn risk using machine learning and 
+explains why it is at risk using SHAP feature attribution. The analytics allow for
+targeted CSM actions grounded in how accounts actually churn. The tool aims to 
+be a part of a CSM's daily or weekly workflow, helping them identify which accounts
+are actually at risk and what necessary actions to take next.
 
 ---
 
 ## Key Features
 
-- 🎯 **Risk scoring** with calibrated probabilities (0–100%), color-coded by tier (Low / Medium / High)
-- 🔍 **Per-account explanations** via SHAP — every score includes the top drivers and protective signals in plain English
-- 💡 **Action recommendations** grounded in B2B SaaS CSM domain knowledge, timeframed by urgency (This Week / This Month / This Quarter)
-- 📋 **Portfolio Scorer** — upload a CSV of your book of business, get a ranked list with risk tiers, top drivers, and suggested plays
-- 📊 **Model transparency** dashboard with full performance metrics, calibration curves, and explicit limitations
+- **Risk scoring** with calibrated probabilities (0–100%), color-coded by tier (Low / Medium / High)
+- **Per-account explanations** via SHAP so every score includes the top drivers and protective signals in plain English
+- **Action recommendations** grounded in B2B SaaS CSM domain knowledge
+- **Portfolio Scorer** where a CSM can upload a CSV of their account list and get a ranked list with risk tiers, top drivers, and suggested plays
+- **Model transparency** dashboard with full performance metrics, calibration curves, and explicit limitations
 
 ---
 
 ## Product Decisions Worth Highlighting
 
-**Optimized for recall, not accuracy.** A false negative — a churning account the model misses — means a lost customer and a missed save opportunity. A false positive means one unnecessary CSM call. That asymmetry is why I used PR-AUC as the primary optimization metric (not ROC-AUC, which is misleadingly optimistic on imbalanced data where ~80% of accounts are healthy).
+**Optimized for recall, not accuracy.** This choice was made because a false negative, or a churning account the model misses, means a lost customer and a missed save opportunity. A false positive means one unnecessary CSM call. That asymmetry is why I used PR-AUC as the primary optimization metric (not ROC-AUC, which is misleadingly optimistic on imbalanced data where ~80% of accounts are healthy).
 
-**Synthesized realistic B2B data instead of using Telco.** Standard churn datasets are consumer-telecom — they don't contain the signals B2B CSMs actually act on: seat utilization, exec sponsor changes, QBR attendance, or feature adoption. I designed an 8,000-row synthetic dataset with realistic cross-feature correlations drawn directly from my CSM experience, then validated it against the patterns in the EDA.
+**Synthesized realistic B2B data.** Standard churn datasets don't contain the signals B2B CSMs actually act on: seat utilization, exec sponsor changes, QBR attendance, or feature adoption. I designed an 8,000-row synthetic dataset based on my experience at Okta thus far with realistic cross-feature correlations.
 
 **Surfaced SHAP explanations as plain English.** A raw SHAP value of +0.34 is useless to a CSM. Every driver gets translated into qualitative impact tiers ("Strongly increases churn risk") and then mapped to a specific action — so the output is "book an exec intro call within 14 days," not "exec_sponsor_changed_last_180d: 0.34."
 
-**Made Portfolio Scorer a v1 feature, not v2.** Single-account scoring is a nice demo. Bulk prioritization — uploading a 50-account book and getting a ranked action list — is what actually changes a CSM's Monday morning. Scoping it to v1 reflects how I'd prioritize if this were a real product spec.
-
-**Included a Model Performance tab.** Opaque "AI scores" get ignored or gamed. Showing precision, recall, the confusion matrix, calibration curves, and explicit limitations builds the trust with CS leadership that makes adoption possible. Transparency is a product feature.
-
-**Treated the model as table stakes, not the product.** PR-AUC of 0.57 is solid but not magical. The differentiation is the explainability and action layer that sits on top. A churn score alone is a feature; the interpretation layer is what makes it a tool a CSM would actually open on Monday morning.
+**The model is not the product.** The explainability & action oriented nature of ChurnBurn is what the product is centered around. The churn score the model creates is a feature, but what comes after is what makes the tool usable.
 
 ---
 
