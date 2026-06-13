@@ -73,7 +73,8 @@ Full analysis in [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb).
 
 **Risk compounds.** One risk signal (low utilization, exec sponsor change, or short tenure) correlates with ~31% churn, two signals are to ~51% and all three is ~72%. 
 
-**Industry: Relatively not a useful predictor (~18–22% churn across all segments).** Industry-specific churn playbooks are not necessary as the more important signals are in customer behavior. 
+**Industry: Relatively not a useful predictor (~18–22% churn across all segments)** Industry-specific churn playbooks are not necessary as the more important signals are in customer behavior. 
+
 ---
 
 ## Structure 
