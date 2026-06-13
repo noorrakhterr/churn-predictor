@@ -2,8 +2,8 @@
 Streamlit dashboard — Churn Risk Predictor.
 
 Tabs:
-  1. Risk Scorer      — score a single account, explain why, get actions
-  2. Portfolio View   — score a book of business, prioritize, download
+  1. Individual Account Scorer — score a single account, explain why, get actions
+  2. Portfolio Scorer   — score a book of business, prioritize, download
   3. Model Performance — honest evaluation metrics, plots, limitations
 """
 
@@ -14,13 +14,9 @@ import json
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import shap
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,9 +26,7 @@ from explain import (
     load_artifact,
     explain_prediction,
     make_recommendation,
-    format_for_csm,
     clean_feature_name,
-    _clean_name,
     _parse_feat,
 )
 from preprocess import RAW_DATA_PATH
@@ -57,15 +51,15 @@ def display_image(image_path: str, width_percent: int = 80) -> None:
         st.warning(f"Image not found: {image_path}")
 
 
-# ── Page config ───────────────────────────────────────────────────────────────
+#  Page config 
 
 st.set_page_config(
     page_title="Churn Risk Predictor",
-    page_icon="📊",
+    page_icon="",
     layout="wide",
 )
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+#  CSS 
 
 st.markdown(
     '<link href="https://fonts.googleapis.com/css2?family=Inter+Tight'
@@ -84,19 +78,19 @@ st.markdown(
 
 st.markdown("""
 <style>
-/* ── Base & font ── */
+/*  Base & font  */
 html, body, [class*="css"] {
     font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif !important;
     font-weight: 400;
 }
 .stApp { background: #FFFFFF !important; }
 
-/* ── Streamlit chrome ── */
+/*  Streamlit chrome  */
 #MainMenu, footer, [data-testid="stHeader"] { display: none !important; }
 .stDeployButton                             { display: none !important; }
 .block-container                            { padding-top: 1.5rem !important; }
 
-/* ── Headings ── */
+/*  Headings  */
 h1, h2, h3, h4, h5, h6,
 [data-testid="stMarkdownContainer"] h1,
 [data-testid="stMarkdownContainer"] h2,
@@ -108,7 +102,7 @@ h1, h2, h3, h4, h5, h6,
     color: #000000 !important;
 }
 
-/* ── Buttons ── */
+/*  Buttons  */
 .stButton > button {
     font-family: 'Inter Tight', sans-serif !important;
     font-weight: 600 !important;
@@ -133,7 +127,7 @@ button[data-testid="baseButton-primary"]:hover {
     border-color: #82A1E8 !important;
 }
 
-/* ── Tabs ── */
+/*  Tabs  */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: 4px;
     border-bottom: 1px solid #CFCFCF !important;
@@ -159,7 +153,7 @@ button[data-testid="baseButton-primary"]:hover {
     padding-top: 24px !important;
 }
 
-/* ── Metric cards ── */
+/*  Metric cards  */
 [data-testid="metric-container"] {
     background: #CFCFCF !important;
     border-radius: 4px !important;
@@ -180,7 +174,7 @@ button[data-testid="baseButton-primary"]:hover {
     color: #000000 !important;
 }
 
-/* ── Expanders ── */
+/*  Expanders  */
 [data-testid="stExpander"] {
     border: 1px solid #CFCFCF !important;
     border-radius: 4px !important;
@@ -189,11 +183,15 @@ button[data-testid="baseButton-primary"]:hover {
 }
 [data-testid="stExpander"] summary {
     font-family: 'Inter Tight', sans-serif !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     color: #000000 !important;
 }
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span {
+    font-weight: 700 !important;
+}
 
-/* ── Inputs ── */
+/*  Inputs  */
 .stSelectbox label, .stSlider label,
 .stNumberInput label, .stRadio label,
 .stToggle label, .stCheckbox label {
@@ -202,20 +200,23 @@ button[data-testid="baseButton-primary"]:hover {
     color: #000000 !important;
 }
 
-/* ── Captions ── */
+/*  Captions  */
 .stCaption, [data-testid="stCaptionContainer"] p {
     color: #82A1E8 !important;
     font-family: 'Inter Tight', sans-serif !important;
 }
 
-/* ── Code blocks ── */
+/*  Code blocks  */
 [data-testid="stCode"] {
     background: #F5F5F5 !important;
     border-radius: 4px !important;
     border: 1px solid #CFCFCF !important;
 }
 
-/* ── Download buttons ── */
+/*  Download buttons  */
+[data-testid="stDownloadButton"] {
+    height: 100% !important;
+}
 [data-testid="stDownloadButton"] > button {
     font-family: 'Inter Tight', sans-serif !important;
     font-weight: 600 !important;
@@ -223,6 +224,8 @@ button[data-testid="baseButton-primary"]:hover {
     background: #FFFFFF !important;
     border: 1.5px solid #CFCFCF !important;
     color: #000000 !important;
+    height: 83px !important;
+    width: 100% !important;
 }
 [data-testid="stDownloadButton"] > button:hover {
     background: #82A1E8 !important;
@@ -230,20 +233,39 @@ button[data-testid="baseButton-primary"]:hover {
     color: #FFFFFF !important;
 }
 
-/* ── Dividers ── */
+/*  File uploader  */
+[data-testid="stFileUploader"] *,
+[data-testid="stFileUploaderDropzone"],
+[data-testid="stFileUploaderDropzone"] > div,
+[data-testid="stFileUploaderDropzoneInput"] + div,
+section[data-testid="stFileUploaderDropzone"] {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+}
+[data-testid="stFileUploaderDropzone"] {
+    border: 1.5px solid #CFCFCF !important;
+    border-radius: 4px !important;
+}
+
+/*  Dividers  */
 hr { border-color: #CFCFCF !important; border-top-width: 1px !important; }
 
-/* ══ Custom HTML components ══ */
+/*  Custom HTML components  */
 
 .risk-card {
     background: #CFCFCF; border-radius: 4px;
     padding: 20px 24px; margin-bottom: 16px;
 }
 .factor-card {
-    background: #CFCFCF; border-left: 3px solid #000000;
+    background: #FEF9C3; border-left: 4px solid #EAB308;
     border-radius: 4px; padding: 12px 16px; margin-bottom: 8px;
 }
-.factor-card.protective { border-left-color: #82A1E8; }
+.factor-card.high {
+    background: #FEE2E2; border-left-color: #EF4444;
+}
+.factor-card.protective {
+    background: #DCFCE7; border-left-color: #22C55E;
+}
 .action-card {
     background: #CFCFCF; border-radius: 4px;
     padding: 12px 16px; margin-bottom: 8px;
@@ -251,22 +273,22 @@ hr { border-color: #CFCFCF !important; border-top-width: 1px !important; }
 
 /* Risk badges */
 .badge-low {
-    background: #82A1E8; color: #FFFFFF; padding: 4px 12px;
-    border-radius: 2px; font-weight: 700; font-size: .75rem;
+    background: #DCFCE7; color: #166534; padding: 4px 12px;
+    border-radius: 999px; font-weight: 700; font-size: .8rem;
     display: inline-block; font-family: 'Inter Tight', sans-serif;
-    letter-spacing: 0.06em; text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 .badge-medium {
-    background: #CFCFCF; color: #000000; padding: 4px 12px;
-    border-radius: 2px; font-weight: 700; font-size: .75rem;
+    background: #FEF9C3; color: #854D0E; padding: 4px 12px;
+    border-radius: 999px; font-weight: 700; font-size: .8rem;
     display: inline-block; font-family: 'Inter Tight', sans-serif;
-    letter-spacing: 0.06em; text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 .badge-high {
-    background: #000000; color: #FFFFFF; padding: 4px 12px;
-    border-radius: 2px; font-weight: 700; font-size: .75rem;
+    background: #FEE2E2; color: #991B1B; padding: 4px 12px;
+    border-radius: 999px; font-weight: 700; font-size: .8rem;
     display: inline-block; font-family: 'Inter Tight', sans-serif;
-    letter-spacing: 0.06em; text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 /* Timeframe labels */
@@ -290,7 +312,7 @@ hr { border-color: #CFCFCF !important; border-top-width: 1px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Artifact & data loading ───────────────────────────────────────────────────
+#  Artifact & data loading 
 
 @st.cache_resource(show_spinner="Loading model and explainer…")
 def _get_artifacts():
@@ -322,7 +344,7 @@ INDUSTRIES     = ["Education", "Finance", "Healthcare", "Manufacturing",
                   "Media", "Retail", "Tech", "Telecom"]
 CONTRACT_TYPES = ["Annual", "Monthly", "Multi-year"]
 
-# ── Preset scenarios ──────────────────────────────────────────────────────────
+#  Preset scenarios 
 
 PRESETS: dict[str, dict] = {
     "healthy": {
@@ -363,7 +385,7 @@ PRESETS: dict[str, dict] = {
     },
 }
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+#  Helpers 
 
 def _to_customer(inp: dict) -> dict:
     """Convert UI-scale form inputs to model feature dict."""
@@ -394,61 +416,9 @@ def _to_customer(inp: dict) -> dict:
 
 
 def _risk_color(tier: str) -> str:
-    return {"Low": "#82A1E8", "Medium": "#6B7280", "High": "#000000"}.get(tier, "#6B7280")
+    return {"Low": "#22C55E", "Medium": "#EAB308", "High": "#EF4444"}.get(tier, "#6B7280")
 
 
-def _gauge(prob: float, tier: str) -> go.Figure:
-    color = _risk_color(tier)
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=round(prob * 100, 1),
-        number={"suffix": "%", "font": {"size": 52, "color": color}},
-        gauge={
-            "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": "#9CA3AF"},
-            "bar": {"color": color, "thickness": 0.28},
-            "bgcolor": "white",
-            "borderwidth": 0,
-            "steps": [
-                {"range": [0,  30], "color": "#EEF2FB"},
-                {"range": [30, 70], "color": "#F5F5F5"},
-                {"range": [70, 100], "color": "#E8E8E8"},
-            ],
-        },
-    ))
-    fig.update_layout(
-        height=230,
-        margin=dict(l=20, r=20, t=30, b=0),
-        paper_bgcolor="#FFFFFF",
-        font=dict(family="Inter Tight, sans-serif"),
-    )
-    return fig
-
-
-def _waterfall(customer_dict: dict) -> plt.Figure:
-    """Build a SHAP waterfall chart for one customer dict."""
-    features = list(PREPROCESSOR.feature_names_in_)
-    X_raw = pd.DataFrame([{c: customer_dict.get(c) for c in features}])
-    X_enc = PREPROCESSOR.transform(X_raw)
-    if hasattr(X_enc, "toarray"):
-        X_enc = X_enc.toarray()
-
-    raw_exp = EXPLAINER(X_enc)
-    bv = (float(raw_exp.base_values[0])
-          if hasattr(raw_exp.base_values, "__len__")
-          else float(raw_exp.base_values))
-
-    exp = shap.Explanation(
-        values=raw_exp.values[0],
-        base_values=bv,
-        data=X_enc[0],
-        feature_names=[_clean_name(f) for f in FEATURE_NAMES],
-    )
-    plt.close("all")
-    shap.plots.waterfall(exp, max_display=12, show=False)
-    fig = plt.gcf()
-    fig.set_size_inches(8, 5)
-    plt.tight_layout()
-    return fig
 
 
 @st.cache_data(show_spinner="Scoring portfolio…")
@@ -498,7 +468,7 @@ def _score_portfolio(csv_bytes: bytes) -> pd.DataFrame | None:
         rows.append({
             "Account":       row.get("company_name", row.get("account_id", f"ACC-{i:04d}")),
             "Industry":      row.get("industry", "—"),
-            "ACV ($)":       float(row.get("acv_usd", 0)),
+            "ARR ($)":       float(row.get("acv_usd", 0)),
             "Tenure (mo)":   int(row.get("tenure_months", 0)),
             "Risk Score":    round(prob * 100, 1),
             "Risk Tier":     tier,
@@ -530,11 +500,11 @@ def _action_plan_txt(portfolio_df: pd.DataFrame) -> str:
 
 def _color_rows(row: pd.Series):
     tier = row.get("Risk Tier", "")
-    bg = {"High": "#F0F0F0", "Medium": "#EEF2FB", "Low": "#FFFFFF"}.get(tier, "#FFFFFF")
+    bg = {"High": "#FEE2E2", "Medium": "#FEF9C3", "Low": "#DCFCE7"}.get(tier, "#FFFFFF")
     return [f"background-color: {bg}"] * len(row)
 
 
-# ── Navigation ───────────────────────────────────────────────────────────────────────
+#  Navigation 
 
 active = st.query_params.get("tab", "scorer")
 
@@ -563,9 +533,9 @@ st.markdown(
             color:#82A1E8;text-decoration:none;letter-spacing:-0.025em;
             margin-right:48px;white-space:nowrap;">ChurnBurn</a>
   <div style="display:flex;gap:4px;align-items:flex-end;">
-    {_nav("Risk Scorer",       "scorer")}
-    {_nav("Portfolio View",    "portfolio")}
-    {_nav("Model Performance", "performance")}
+    {_nav("Individual Account Scorer", "scorer")}
+    {_nav("Portfolio Scorer",    "portfolio")}
+    {_nav("Model Information", "performance")}
   </div>
 </nav>
 </p>
@@ -573,9 +543,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ═════════════════════════════════════════════════════════════════
-# TAB 1 — Risk Scorer
-# ═════════════════════════════════════════════════════════════════
+# 
+# TAB 1 — Individual Account Scorer
+# 
 
 if active == "scorer":
     if "preset" not in st.session_state:
@@ -587,20 +557,11 @@ if active == "scorer":
 
     left, right = st.columns([1, 2], gap="large")
 
-    # ── Left column: inputs ──────────────────────────────────────
+    #  Left column: inputs
     with left:
-        pc1, pc2, pc3 = st.columns(3)
-        if pc1.button("💚 Healthy",  use_container_width=True):
-            st.session_state.preset = "healthy";  st.session_state.explanation = None
-        if pc2.button("⚠️ At-Risk",  use_container_width=True):
-            st.session_state.preset = "at_risk";  st.session_state.explanation = None
-        if pc3.button("🚨 Critical", use_container_width=True):
-            st.session_state.preset = "critical"; st.session_state.explanation = None
-
         p = PRESETS[st.session_state.preset]
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-        with st.expander("🏢 Account Profile", expanded=True):
+        with st.expander(" Account Profile", expanded=False):
             industry      = st.selectbox("Industry", INDUSTRIES,
                                          index=INDUSTRIES.index(p["industry"]))
             company_size  = st.slider("Company size (employees)", 50, 5000,
@@ -612,7 +573,7 @@ if active == "scorer":
             acv_usd       = st.number_input("Annual contract value ($)",
                                             5000, 500_000, p["acv_usd"], step=1000)
 
-        with st.expander("📊 Product Usage"):
+        with st.expander(" Product Usage"):
             seats_purchased     = st.slider("Seats purchased", 5, 500,
                                             p["seats_purchased"])
             seats_active        = st.slider("Active seats (last 30d)", 0,
@@ -633,7 +594,7 @@ if active == "scorer":
                                                   0, 50_000,
                                                   p["api_calls_last_30d"], step=100)
 
-        with st.expander("💬 Engagement & Health"):
+        with st.expander(" Engagement & Health"):
             support_tickets  = st.slider("Support tickets (last 90d)", 0, 15,
                                          p["support_tickets_last_90d"])
             critical_tickets = st.slider("Critical tickets (last 90d)", 0, 7,
@@ -646,7 +607,7 @@ if active == "scorer":
             days_login       = st.slider("Days since last login", 0, 180,
                                          p["days_since_last_login"])
 
-        with st.expander("💰 Commercial"):
+        with st.expander(" Commercial"):
             discount_pct    = st.slider("Discount (%)", 0, 50, p["discount_pct"])
             payment_delays  = st.slider("Payment delays (last year)", 0, 5,
                                         p["payment_delays_last_year"])
@@ -655,8 +616,23 @@ if active == "scorer":
                                               p["expansion_revenue_last_year_usd"],
                                               step=500)
 
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-        score_btn = st.button("🔍 Score this account", type="primary",
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        st.markdown(
+            "<p style='font-family:Inter Tight,sans-serif;font-size:.8rem;"
+            "font-weight:600;text-align:center;"
+            "color:#82A1E8;margin-bottom:6px;'>Load sample account data</p>",
+            unsafe_allow_html=True,
+        )
+        pc1, pc2, pc3 = st.columns(3)
+        if pc1.button("Healthy",  use_container_width=True):
+            st.session_state.preset = "healthy";  st.session_state.explanation = None
+        if pc2.button("At-Risk",  use_container_width=True):
+            st.session_state.preset = "at_risk";  st.session_state.explanation = None
+        if pc3.button("Critical", use_container_width=True):
+            st.session_state.preset = "critical"; st.session_state.explanation = None
+
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        score_btn = st.button("Score", type="primary",
                               use_container_width=True)
 
         if score_btn:
@@ -681,15 +657,15 @@ if active == "scorer":
                 st.session_state.explanation   = explain_prediction(customer)
                 st.session_state.customer_dict = customer
 
-    # ── Right column: results ────────────────────────────────────
+    #  Right column: results 
     with right:
         if st.session_state.explanation is None:
             st.markdown("""
             <div class="empty-state">
               <div style="text-align:center;color:#000000;font-family:'Inter Tight',sans-serif;">
-                <div style="font-size:2.5rem;margin-bottom:8px;">🔍</div>
+                <div style="font-size:2.5rem;margin-bottom:8px;"></div>
                 <div style="font-size:1rem;font-weight:500;">
-                  Fill in the form and click<br><strong>Score this account</strong>
+                  Enter account information and click Score to view analysis
                 </div>
               </div>
             </div>
@@ -702,39 +678,30 @@ if active == "scorer":
             rf       = exp["top_risk_factors"]
             pf       = exp["top_protective_factors"]
 
-            # 1 ── Score card
-            gc, bc = st.columns([2, 1])
-            with gc:
-                st.plotly_chart(_gauge(prob, tier), use_container_width=True)
-            with bc:
-                badge = f"badge-{tier.lower()}"
-                st.markdown(f"""
-                <div style="padding-top:60px;text-align:center;">
-                  <div class="{badge}"
-                       style="font-size:1.1rem;padding:8px 22px;">{tier} Risk</div>
-                </div>""", unsafe_allow_html=True)
-
-            n_sig   = len([f for f in rf if abs(f["shap_value"]) > 0.05])
-            areas   = list(dict.fromkeys(f["feature"] for f in rf[:3]))
-            area_str = ", ".join(areas[:2]) if areas else "multiple signals"
+            # 1  Score card
+            color = _risk_color(tier)
             st.markdown(
-                f"<p style='color:#82A1E8;font-size:.875rem;text-align:center;"
-                f"font-family:Inter Tight,sans-serif;margin-top:-8px;margin-bottom:20px;'>"
-                f"This account shows <strong>{n_sig}</strong> significant risk "
-                f"signal(s) — top drivers: <em>{area_str}</em></p>",
+                f"<div style='text-align:center;padding:32px 0 8px;'>"
+                f"<p style='font-family:Inter Tight,sans-serif;font-size:1rem;"
+                f"font-weight:600;color:#000000;margin-bottom:8px;'>"
+                f"This account's churn risk is:</p>"
+                f"<p style='font-family:Inter Tight,sans-serif;font-size:3.5rem;"
+                f"font-weight:700;color:{color};letter-spacing:-0.03em;margin:0;'>"
+                f"{round(prob * 100, 1)}%</p>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            badge = f"badge-{tier.lower()}"
+            st.markdown(
+                f"<div style='text-align:center;margin-top:16px;margin-bottom:20px;'>"
+                f"<div class='{badge}' style='font-size:1rem;padding:8px 24px;'>"
+                f"{tier} Risk</div></div>",
                 unsafe_allow_html=True,
             )
 
             st.markdown("---")
 
-            # 2 ── Why this score
-            st.markdown("#### 🔬 Why this score")
-            with st.spinner("Building SHAP waterfall…"):
-                wf = _waterfall(customer)
-            st.pyplot(wf, use_container_width=True)
-            plt.close(wf)
-
-            st.markdown("**Top risk factors**")
+            st.markdown("#### Top risk factors")
             for f in rf[:3]:
                 st.markdown(f"""
                 <div class="factor-card">
@@ -743,18 +710,18 @@ if active == "scorer":
                 </div>""", unsafe_allow_html=True)
 
             if pf:
-                st.markdown("**Protective factors**")
+                st.markdown("#### Protective factors")
                 for f in pf[:2]:
                     st.markdown(f"""
                     <div class="factor-card protective">
-                      <div style="font-weight:700;font-size:.875rem;color:#82A1E8;font-family:'Inter Tight',sans-serif;">{f['feature']}</div>
+                      <div style="font-weight:700;font-size:.875rem;color:#000000;font-family:'Inter Tight',sans-serif;">{f['feature']}</div>
                       <div style="font-size:.8rem;color:#000000;font-family:'Inter Tight',sans-serif;">{f['impact']}</div>
                     </div>""", unsafe_allow_html=True)
 
             st.markdown("---")
 
-            # 3 ── Recommended actions
-            st.markdown("#### 🎯 Recommended actions")
+            # 3  Recommended actions
+            st.markdown("####  Recommended actions")
             recs = make_recommendation(rf)
             for rec in recs[:4]:
                 tf = rec.get("timeframe", "")
@@ -766,178 +733,188 @@ if active == "scorer":
                   <div style="font-size:.75rem;color:#82A1E8;font-style:italic;font-family:'Inter Tight',sans-serif;">{rec['internal']}</div>
                 </div>""", unsafe_allow_html=True)
 
-            st.markdown("---")
 
-            # 4 ── Talking points
-            st.markdown("#### 📋 Talking points for next call")
-            st.caption("Copy this into your CRM notes")
-            notes = format_for_csm(exp, account_name="This Account")
-            st.code(notes, language=None)
-
-# ═════════════════════════════════════════════════════════════════
-# TAB 2 — Portfolio View
-# ═════════════════════════════════════════════════════════════════
+# 
+# TAB 2 — Portfolio Scorer
+# 
 
 elif active == "portfolio":
-    st.markdown("""
-    **Upload your book of business CSV** to get a prioritized list of at-risk accounts.
-    The model will score every account and surface the ones needing immediate attention.
-    """)
+    _, _pcol, _ = st.columns([0.1, 0.8, 0.1])
+    with _pcol:
+        st.markdown(
+            "<p style='text-align:center;font-family:Inter Tight,sans-serif;'>"
+            "<strong>Upload your customer list</strong> to get a prioritized list of "
+            "at-risk accounts.</p>",
+            unsafe_allow_html=True,
+        )
 
-    # Template download
-    template_cols = (["company_name", "account_id"]
-                     + list(PREPROCESSOR.feature_names_in_))
-    template_csv = pd.DataFrame(columns=template_cols).to_csv(index=False).encode()
-    st.download_button("📥 Download CSV template", template_csv,
-                       file_name="churn_portfolio_template.csv",
-                       mime="text/csv",
-                       use_container_width=True)
+        # Template download
+        template_cols = (["company_name", "account_id"]
+                         + list(PREPROCESSOR.feature_names_in_))
+        template_csv = pd.DataFrame(columns=template_cols).to_csv(index=False).encode()
+        _dl_col, _up_col = st.columns([1, 1])
+        with _dl_col:
+            st.download_button(" Download CSV template", template_csv,
+                               file_name="churn_portfolio_template.csv",
+                               mime="text/csv",
+                               use_container_width=True)
+        with _up_col:
+            uploaded = st.file_uploader("Upload portfolio CSV", type="csv",
+                                        label_visibility="collapsed")
 
-    st.markdown("---")
-    uploaded = st.file_uploader("Upload portfolio CSV", type="csv",
-                                label_visibility="collapsed")
+        
+        _, _b2, _ = st.columns([1.5, 1, 1.5])
+        with _b2:
+            st.markdown(
+                "<style>.demo-btn + div button, .demo-btn ~ div button "
+                "{ border-color: #CFCFCF !important; }</style>"
+                '<span class="demo-btn"></span>',
+                unsafe_allow_html=True,
+            )
+            use_demo = st.button("Use demo portfolio (50 accounts)",
+                                 use_container_width=True)
 
-    use_demo = st.button("📊 Or use our demo portfolio (50 sample accounts)",
-                         use_container_width=True)
+        st.markdown("---") 
+        
+        csv_bytes: bytes | None = None
+        source_label = ""
+        if uploaded is not None:
+            csv_bytes   = uploaded.read()
+            source_label = uploaded.name
+        elif use_demo or st.session_state.get("portfolio_demo"):
+            csv_bytes   = _demo_bytes()
+            source_label = "Demo portfolio (50 accounts)"
+            st.session_state["portfolio_demo"] = True
 
-    csv_bytes: bytes | None = None
-    source_label = ""
-    if uploaded is not None:
-        csv_bytes   = uploaded.read()
-        source_label = uploaded.name
-    elif use_demo or st.session_state.get("portfolio_demo"):
-        csv_bytes   = _demo_bytes()
-        source_label = "Demo portfolio (50 accounts)"
-        st.session_state["portfolio_demo"] = True
+        if csv_bytes:
+            portfolio_df = _score_portfolio(csv_bytes)
 
-    if csv_bytes:
-        portfolio_df = _score_portfolio(csv_bytes)
+            if portfolio_df is None:
+                source_df = pd.read_csv(io.BytesIO(csv_bytes))
+                required  = list(PREPROCESSOR.feature_names_in_)
+                missing   = [c for c in required if c not in source_df.columns]
+                st.error(f"CSV is missing required columns: {', '.join(missing[:8])}…  "
+                         f"Download the template above for the correct schema.")
+            else:
+                source_df = pd.read_csv(io.BytesIO(csv_bytes))
 
-        if portfolio_df is None:
-            source_df = pd.read_csv(io.BytesIO(csv_bytes))
-            required  = list(PREPROCESSOR.feature_names_in_)
-            missing   = [c for c in required if c not in source_df.columns]
-            st.error(f"CSV is missing required columns: {', '.join(missing[:8])}…  "
-                     f"Download the template above for the correct schema.")
-        else:
-            source_df = pd.read_csv(io.BytesIO(csv_bytes))
-            st.caption(f"Scored: **{source_label}**")
-
-            # ── Headline metrics ──────────────────────────────────
-            n_total  = len(portfolio_df)
-            n_high   = (portfolio_df["Risk Tier"] == "High").sum()
-            n_medium = (portfolio_df["Risk Tier"] == "Medium").sum()
-            acv_at_risk = portfolio_df.loc[
-                portfolio_df["Risk Tier"] == "High", "ACV ($)"
-            ].sum()
-
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Total accounts",  n_total)
-            m2.metric("🔴 High Risk",    n_high,
-                      delta=f"{n_high/n_total:.0%} of portfolio",
-                      delta_color="off")
-            m3.metric("🟡 Medium Risk",  n_medium,
-                      delta=f"{n_medium/n_total:.0%} of portfolio",
-                      delta_color="off")
-            m4.metric("💰 ACV at Risk",  f"${acv_at_risk:,.0f}")
-
-            st.markdown("---")
-
-            # ── Visualisations ────────────────────────────────────
-            vc1, vc2 = st.columns(2)
-
-            with vc1:
-                tier_counts = (portfolio_df["Risk Tier"]
-                               .value_counts()
-                               .reindex(["High", "Medium", "Low"], fill_value=0))
-                fig_dist = go.Figure(go.Bar(
-                    x=tier_counts.index.tolist(),
-                    y=tier_counts.values.tolist(),
-                    marker_color=["#000000", "#82A1E8", "#CFCFCF"],
-                    text=tier_counts.values.tolist(),
-                    textposition="outside",
-                ))
-                fig_dist.update_layout(
-                    title="Risk Distribution",
-                    xaxis_title="Risk Tier", yaxis_title="Accounts",
-                    height=320, margin=dict(l=10, r=10, t=40, b=10),
-                    paper_bgcolor="#FFFFFF",
-                    plot_bgcolor="#FFFFFF",
+                st.markdown(
+                    "<h2 style='text-align:center;font-family:Inter Tight,sans-serif;"
+                    "font-weight:700;letter-spacing:-0.025em;margin-bottom:24px;'>"
+                    "Customer Portfolio Churn Insights</h2>",
+                    unsafe_allow_html=True,
                 )
-                st.plotly_chart(fig_dist, use_container_width=True)
 
-            with vc2:
-                color_map = {"High": "#000000", "Medium": "#82A1E8", "Low": "#CFCFCF"}
-                fig_scatter = go.Figure()
-                for tier_val, grp in portfolio_df.groupby("Risk Tier"):
-                    fig_scatter.add_trace(go.Scatter(
-                        x=grp["Risk Score"],
-                        y=grp["ACV ($)"],
-                        mode="markers",
-                        name=tier_val,
-                        marker=dict(
-                            color=color_map.get(str(tier_val), "#6B7280"),
-                            size=8, opacity=0.75,
-                            line=dict(width=0.5, color="white"),
-                        ),
-                        text=grp["Account"],
-                        hovertemplate="<b>%{text}</b><br>Risk: %{x:.0f}%<br>ACV: $%{y:,.0f}<extra></extra>",
+                #  Headline metrics
+                n_total  = len(portfolio_df)
+                n_high   = (portfolio_df["Risk Tier"] == "High").sum()
+                n_medium = (portfolio_df["Risk Tier"] == "Medium").sum()
+                acv_at_risk = portfolio_df.loc[
+                    portfolio_df["Risk Tier"] == "High", "ARR ($)"
+                ].sum()
+
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Total accounts",  n_total)
+                m2.metric(" High Risk",    n_high,
+                          delta=f"{n_high/n_total:.0%} of portfolio",
+                          delta_color="off")
+                m3.metric(" Medium Risk",  n_medium,
+                          delta=f"{n_medium/n_total:.0%} of portfolio",
+                          delta_color="off")
+                m4.metric(" ARR at Risk",  f"${acv_at_risk:,.0f}")
+
+                st.markdown("---")
+
+                #  Visualisations 
+                vc1, vc2 = st.columns(2)
+
+                with vc1:
+                    tier_counts = (portfolio_df["Risk Tier"]
+                                   .value_counts()
+                                   .reindex(["High", "Medium", "Low"], fill_value=0))
+                    fig_dist = go.Figure(go.Bar(
+                        x=tier_counts.index.tolist(),
+                        y=tier_counts.values.tolist(),
+                        marker_color=["#EF4444", "#EAB308", "#22C55E"],
+                        text=tier_counts.values.tolist(),
+                        textposition="outside",
                     ))
-                fig_scatter.update_layout(
-                    title="ACV vs Churn Risk Score",
-                    xaxis_title="Risk Score (%)", yaxis_title="ACV ($)",
-                    height=320, margin=dict(l=10, r=10, t=40, b=10),
-                    paper_bgcolor="#FFFFFF",
-                    plot_bgcolor="#FFFFFF",
-                    legend=dict(orientation="h", y=-0.2),
-                )
-                st.plotly_chart(fig_scatter, use_container_width=True)
+                    fig_dist.update_layout(
+                        title="Risk Distribution",
+                        xaxis_title="Risk Tier", yaxis_title="Accounts",
+                        height=320, margin=dict(l=10, r=10, t=40, b=10),
+                        paper_bgcolor="#FFFFFF",
+                        plot_bgcolor="#FFFFFF",
+                    )
+                    st.plotly_chart(fig_dist, use_container_width=True)
 
-            st.markdown("---")
+                with vc2:
+                    color_map = {"High": "#EF4444", "Medium": "#EAB308", "Low": "#22C55E"}
+                    fig_scatter = go.Figure()
+                    for tier_val, grp in portfolio_df.groupby("Risk Tier"):
+                        fig_scatter.add_trace(go.Scatter(
+                            x=grp["Risk Score"],
+                            y=grp["ARR ($)"],
+                            mode="markers",
+                            name=tier_val,
+                            marker=dict(
+                                color=color_map.get(str(tier_val), "#6B7280"),
+                                size=8, opacity=0.75,
+                                line=dict(width=0.5, color="white"),
+                            ),
+                            text=grp["Account"],
+                            hovertemplate="<b>%{text}</b><br>Risk: %{x:.0f}%<br>ARR: $%{y:,.0f}<extra></extra>",
+                        ))
+                    fig_scatter.update_layout(
+                        title="ARR vs Churn Risk Score",
+                        xaxis_title="Risk Score (%)", yaxis_title="ARR",
+                        height=320, margin=dict(l=10, r=10, t=40, b=10),
+                        paper_bgcolor="#FFFFFF",
+                        plot_bgcolor="#FFFFFF",
+                        legend=dict(orientation="h", y=-0.2),
+                    )
+                    st.plotly_chart(fig_scatter, use_container_width=True)
 
-            # ── Prioritised table ─────────────────────────────────
-            st.markdown("#### Prioritised account list")
-            display = portfolio_df.copy()
-            display["Risk Score"] = display["Risk Score"].map("{:.0f}%".format)
-            display["ACV ($)"]    = display["ACV ($)"].map("${:,.0f}".format)
+                st.markdown("---")
 
-            styled = display.style.apply(_color_rows, axis=1)
-            st.dataframe(styled, use_container_width=True, height=400,
-                         hide_index=True)
+                #  Prioritised table 
+                st.markdown("#### Prioritised account list")
+                display = portfolio_df.copy()
+                display["Risk Score"] = display["Risk Score"].map("{:.0f}%".format)
+                display["ARR"]    = display["ARR ($)"].map("${:,.0f}".format)
 
-            # ── Downloads ─────────────────────────────────────────
-            dl1, dl2 = st.columns(2)
-            with dl1:
-                st.download_button(
-                    "📥 Download prioritized list (CSV)",
-                    portfolio_df.to_csv(index=False).encode(),
-                    file_name="churn_risk_prioritized.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
-            with dl2:
-                plan_txt = _action_plan_txt(portfolio_df)
-                st.download_button(
-                    "📥 Download CSM action plan (TXT)",
-                    plan_txt.encode(),
-                    file_name="csm_action_plan.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                )
+                styled = display.style.apply(_color_rows, axis=1)
+                st.dataframe(styled, use_container_width=True, height=400,
+                             hide_index=True)
 
-# ═════════════════════════════════════════════════════════════════
+                #  Downloads 
+                dl1, dl2 = st.columns(2)
+                with dl1:
+                    st.download_button(
+                        " Download prioritized list (CSV)",
+                        portfolio_df.to_csv(index=False).encode(),
+                        file_name="churn_risk_prioritized.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
+                with dl2:
+                    plan_txt = _action_plan_txt(portfolio_df)
+                    st.download_button(
+                        " Download CSM action plan (TXT)",
+                        plan_txt.encode(),
+                        file_name="csm_action_plan.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
+
+# 
 # TAB 3 — Model Performance
-# ═════════════════════════════════════════════════════════════════
+# 
 
 elif active == "performance":
-    st.markdown("### How well does this work?")
-    st.markdown(
-        "<p class='subhead'>Transparency builds trust. Here's exactly how the model "
-        "performs and where it falls short.</p>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("### Model Performance and Evaluation")
 
-    # ── Section 1: Headline metrics ───────────────────────────────
+    #  Section 1: Headline metrics 
     mm1, mm2, mm3, mm4 = st.columns(4)
     mm1.metric("ROC-AUC",  f"{METRICS['roc_auc']:.3f}",
                help="How well the model ranks churners above non-churners. "
@@ -952,29 +929,59 @@ elif active == "performance":
 
     st.markdown("---")
 
-    # ── Section 2: 2×2 plot grid ─────────────────────────────────
+    #  Section 2: 2×2 plot grid 
     st.markdown("#### Evaluation plots")
     PLOTS = ROOT / "docs" / "plots"
+    _PLOT_DESCRIPTIONS = {
+        "confusion_matrix.png": (
+            "Confusion Matrix (threshold = 0.50)",
+            "Shows how many churners were correctly caught (true positives) vs missed "
+            "(false negatives) "
+        ),
+        "roc_curve.png": (
+            "ROC Curve",
+            "Plots the true positive rate against the false positive rate across all "
+            "thresholds. The AUC of 0.80 means the model ranks a random churner above "
+            "a random non-churner 80% of the time.",
+        ),
+        "pr_curve.png": (
+            "Precision-Recall Curve",
+            "The Precision-Recall curve shows the trade-off between how many at-"
+            "risk accounts the model correctly identifies (recall) "
+            "and how many of its flags are actually accurate (precision).",
+        ),
+        "calibration_curve.png": (
+            "Calibration Curve",
+            "Compares predicted probabilities to actual observed churn rates."
+        ),
+    }
+
     pg1, pg2 = st.columns(2)
     pg3, pg4 = st.columns(2)
-    for col, fname, caption in [
-        (pg1, "confusion_matrix.png", "Confusion Matrix (threshold = 0.50)"),
-        (pg2, "roc_curve.png",        "ROC Curve"),
-        (pg3, "pr_curve.png",         "Precision-Recall Curve"),
-        (pg4, "calibration_curve.png","Calibration Curve"),
+    for col, fname in [
+        (pg1, "confusion_matrix.png"),
+        (pg2, "roc_curve.png"),
+        (pg3, "pr_curve.png"),
+        (pg4, "calibration_curve.png"),
     ]:
+        caption, description = _PLOT_DESCRIPTIONS[fname]
         p = PLOTS / fname
         with col:
             st.caption(caption)
             display_image(str(p), 70)
+            st.markdown(
+                f"<p style='font-size:.8rem;color:#4B5563;font-family:Inter Tight,"
+                f"sans-serif;margin-top:6px;'>{description}</p>",
+                unsafe_allow_html=True,
+            )
 
     st.markdown("---")
 
-    # ── Section 3: SHAP feature importance ───────────────────────
+    #  Section 3: SHAP feature importance 
     st.markdown("#### Top features driving predictions")
     shap_img = PLOTS / "shap_summary.png"
     if shap_img.exists():
-        display_image(str(shap_img), 90)
+        display_image(str(shap_img), 45)
     st.markdown("""
 **Reading this chart:** Each dot is one test-set account. The x-axis shows
 the SHAP value — how much that feature pushed the model toward (right) or
@@ -982,13 +989,13 @@ away from (left) predicting churn. Colour indicates feature value: red = high,
 blue = low.
 
 Top 5 drivers observed in this dataset:
-1. **QBR Attendance Rate** — low attendance is the strongest predictor; when
+1. **QBR Attendance Rate** — low attendance is the strongest predictor: when
    customers stop showing up to reviews, churn follows.
 2. **Seat Utilization Rate** — unused licences signal low adoption and weak
    product value realization.
-3. **NPS Score** — a low NPS is both a signal and a cause: unhappy customers
+3. **NPS Score** — this one's simple: unhappy customers
    leave.
-4. **Contract Type** — monthly contracts correlate strongly with churn; the
+4. **Contract Type** — monthly contracts correlate strongly with churn, the
    lower switching cost removes a key retention mechanism.
 5. **Days Since Last Login** — extended admin inactivity suggests the product
    has been abandoned in practice, even if the contract is live.
@@ -996,9 +1003,9 @@ Top 5 drivers observed in this dataset:
 
     st.markdown("---")
 
-    # ── Section 4: Limitations ────────────────────────────────────
+    #  Section 4: Limitations 
     st.markdown("#### Known limitations")
-    st.warning("""
+    st.markdown("""
 **This model has important limitations you should understand before using it:**
 
 - **Synthetic training data.** Designed to mirror B2B SaaS patterns, but
@@ -1009,7 +1016,7 @@ Top 5 drivers observed in this dataset:
   removes something customers rely on, the model's learned associations
   become stale.
 - **Snapshot-in-time.** This is a point-in-time predictor, not a time-series
-  model. Trajectory matters — an account improving vs. declining looks the
+  model. An account improving vs. declining looks the
   same at a single snapshot.
 - **Calibration.** Validated on synthetic data. Real-world calibration may
   differ. Verify P(churn) against observed rates before trusting the numbers.
@@ -1019,31 +1026,29 @@ Top 5 drivers observed in this dataset:
 
     st.markdown("---")
 
-    # ── Section 5: Why these metrics ─────────────────────────────
+    #  Section 5: Why these metrics 
     st.markdown("#### Why these metrics?")
     st.markdown("""
 **Why PR-AUC instead of accuracy?**
 
-With ~20% churn rate, a model that predicts *nobody churns* achieves 80%
-accuracy — useless, but technically "good". PR-AUC ignores the majority class
+With ~20% churn rate, a model that predicts nobody churns achieves 80%
+accuracy. PR-AUC ignores the majority class
 entirely and focuses on how well the model identifies the churners. A PR-AUC
 of 0.57 (vs. 0.20 for random) means the model is genuinely surfacing at-risk
 accounts.
 
 **Why prioritise recall over precision?**
 
-The business cost of a missed churn (false negative) is the full ACV of the
-lost account — typically $20k–$100k+ and irreversible. The cost of a false
-alarm (false positive) is one unnecessary CSM call — maybe an hour of time.
-The asymmetry is stark: err toward catching more churners, not fewer.
+The business cost of a missed churn (false negative) is the full ARR of the
+lost account. The cost of a false
+alarm (false positive) is one unnecessary CSM call: maybe an hour of time.
 
 **What's the precision–recall trade-off?**
 
 At the default threshold of 0.50, the model catches ~69% of actual churners
-(recall) with ~42% precision — roughly 3 false alarms for every 2 real
-churners surfaced. Raising the threshold to ~0.65 (the F1-optimal point)
-brings precision and recall to ~54% each. Neither is right or wrong; it
-depends on your team's capacity for follow-up calls.
+(recall) with ~42% precision which is roughly 3 false alarms for every 2 real
+churners surfaced. Raising the threshold to ~0.65
+brings precision and recall to ~54% each. 
 
 **Why ROC-AUC too?**
 
@@ -1053,15 +1058,15 @@ synthetic data. We report it alongside PR-AUC so you can compare to
 third-party benchmarks, while using PR-AUC for internal decision-making.
 """)
 
-# ── Footer (all tabs) ─────────────────────────────────────────────────────────
+#  Footer (all tabs) 
 
 st.markdown("---")
 st.markdown(
     "<p style='text-align:center;color:#82A1E8;font-size:.75rem;"
     "font-family:Inter Tight,sans-serif;'>"
     "Built by <strong style='color:#000000;'>Noor Akhter</strong> · "
-    "<a href='https://github.com/noor-akhter' style='color:#82A1E8;'>GitHub</a> · "
-    "<a href='https://linkedin.com/in/noorakhter' style='color:#82A1E8;'>LinkedIn</a> · "
+    "<a href='https://github.com/noorrakhterr' style='color:#82A1E8;'>GitHub</a> · "
+    "<a href='https://www.linkedin.com/in/noor-akhter-ab39851b5/' style='color:#82A1E8;'>LinkedIn</a> · "
     "</p>",
     unsafe_allow_html=True,
 )
